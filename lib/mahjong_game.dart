@@ -13,7 +13,7 @@ enum GameState {
 class MahjongAction {
   final PlayerPosition player;
   final String type; // 'WIN', 'PONG', 'KONG', 'EAT', 'PASS'
-  final List<int>? tiles; // 用於吃的組合
+  final List<int>? tiles;
 
   MahjongAction(this.player, this.type, {this.tiles});
 
@@ -28,6 +28,7 @@ class MahjongAction {
 class MahjongGame {
   final List<int> deck = [];
   final Map<PlayerPosition, List<int>> playerHands = {};
+  final Map<PlayerPosition, List<int>> playerFlowers = {}; // 存放亮出的花牌
   final List<int> discards = [];
   
   PlayerPosition currentTurn = PlayerPosition.east;
@@ -35,7 +36,6 @@ class MahjongGame {
   int? lastDiscardedTile;
   PlayerPosition? lastDiscarder;
 
-  // Phase 2 核心：紀錄目前等待中的動作
   Map<PlayerPosition, List<String>> possibleActions = {};
   Map<PlayerPosition, MahjongAction> playerDecisions = {};
 
@@ -64,11 +64,43 @@ class MahjongGame {
   void _shuffleAndDeal() {
     deck.shuffle(Random());
     for (var pos in PlayerPosition.values) {
-      playerHands[pos] = deck.sublist(0, 16);
-      deck.removeRange(0, 16);
-      playerHands[pos]!.sort();
+      playerHands[pos] = [];
+      playerFlowers[pos] = [];
+      
+      // 先發 16 張
+      for (int i = 0; i < 16; i++) {
+        playerHands[pos]!.add(deck.removeAt(0));
+      }
+      
+      // **重要：處理起手補花**
+      _processFlowers(pos);
     }
+    
+    // 莊家摸第 17 張並處理補花
     _draw(currentTurn);
+  }
+
+  /// 處理補花邏輯：將手牌中的花牌移至亮牌區，並從牌堆末尾補牌
+  void _processFlowers(PlayerPosition pos) {
+    bool hasFlowers = true;
+    while (hasFlowers) {
+      // 找出所有花牌 (ID >= 61)
+      List<int> flowers = playerHands[pos]!.where((t) => t >= 61).toList();
+      if (flowers.isEmpty) {
+        hasFlowers = false;
+      } else {
+        for (var f in flowers) {
+          playerHands[pos]!.remove(f);
+          playerFlowers[pos]!.add(f);
+          
+          // 台灣麻將規則：從牌堆末尾補牌
+          if (deck.isNotEmpty) {
+            playerHands[pos]!.add(deck.removeLast());
+          }
+        }
+      }
+    }
+    playerHands[pos]!.sort();
   }
 
   void discard(PlayerPosition pos, int tile) {
@@ -88,7 +120,6 @@ class MahjongGame {
     }
   }
 
-  /// 掃描所有玩家，找出誰可以對這張牌做什麼
   void _collectPossibleActions(int tile, PlayerPosition discarder) {
     possibleActions.clear();
     playerDecisions.clear();
@@ -97,16 +128,12 @@ class MahjongGame {
       if (pos == discarder) continue;
       
       List<String> actions = [];
-      
-      // 1. 胡牌檢查
       List<int> handWithTile = List.from(playerHands[pos]!)..add(tile);
       if (WinLogic.isWinning(handWithTile)) actions.add('WIN');
 
-      // 2. 碰/槓檢查
       if (ActionValidator.canPong(playerHands[pos]!, tile)) actions.add('PONG');
       if (ActionValidator.canKong(playerHands[pos]!, tile)) actions.add('KONG');
 
-      // 3. 吃牌檢查 (僅限下家)
       if (pos == _getNextPlayer(discarder)) {
         if (ActionValidator.getEatOptions(playerHands[pos]!, tile).isNotEmpty) {
           actions.add('EAT');
@@ -114,35 +141,28 @@ class MahjongGame {
       }
 
       if (actions.isNotEmpty) {
-        actions.add('PASS'); // 總是可以選擇不動作
+        actions.add('PASS');
         possibleActions[pos] = actions;
       }
     }
   }
 
-  /// 玩家提交他們的決定
   void submitDecision(PlayerPosition pos, String actionType, {List<int>? eatTiles}) {
     if (state != GameState.waitingForActions) return;
     if (!possibleActions.containsKey(pos)) return;
 
     playerDecisions[pos] = MahjongAction(pos, actionType, tiles: eatTiles);
 
-    // 如果所有有權利動作的玩家都決定好了，就結算
     if (playerDecisions.length == possibleActions.length) {
       _resolveActions();
     }
   }
 
   void _resolveActions() {
-    // 找出優先權最高的動作
     MahjongAction? bestAction;
-    
     for (var decision in playerDecisions.values) {
       if (bestAction == null || decision.priority > bestAction.priority) {
         bestAction = decision;
-      } else if (decision.priority == bestAction.priority && decision.priority == 3) {
-        // 如果兩個人都要胡牌，根據台灣規則通常是「攔胡」（順位優先）
-        // 這裡可以根據 discarder 的順序來決定誰贏
       }
     }
 
@@ -194,7 +214,10 @@ class MahjongGame {
     if (deck.isNotEmpty) {
       int newTile = deck.removeAt(0);
       playerHands[pos]!.add(newTile);
-      playerHands[pos]!.sort();
+      
+      // **重要：摸牌後也需要處理補花**
+      _processFlowers(pos);
+      
       state = GameState.waitingForDiscard;
     } else {
       state = GameState.gameOver;

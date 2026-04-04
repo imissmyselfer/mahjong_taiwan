@@ -110,7 +110,7 @@ packages:
   majong_taiwan_core:
     dependency: "direct main"
     description:
-      path: "../majong-taiwan-core"
+      path: "../majong_taiwan_core"
       relative: true
     source: path
     version: "1.0.0"
