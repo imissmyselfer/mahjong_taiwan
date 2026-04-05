@@ -204,6 +204,11 @@ class MahjongGame {
       state = GameState.gameOver;
     } else if (lastDiscardedTile != null) {
       final tile = lastDiscardedTile!;
+      // 牌被拿走了，從棄牌區移除
+      if (discards.isNotEmpty && discards.last == tile) {
+        discards.removeLast();
+      }
+
       if (action.type == 'PONG') {
         playerHands[pos]!.remove(tile);
         playerHands[pos]!.remove(tile);
