@@ -1,6 +1,5 @@
 import 'dart:math';
-import 'package:majong_taiwan_core/src/win_logic.dart';
-import 'package:majong_taiwan_core/src/action_validator.dart';
+import 'package:majong_taiwan_core/majong_taiwan_core.dart';
 
 enum PlayerPosition { east, south, west, north }
 
@@ -28,7 +27,7 @@ class MahjongAction {
 class MahjongGame {
   final List<int> deck = [];
   final Map<PlayerPosition, List<int>> playerHands = {};
-  final Map<PlayerPosition, List<List<int>>> playerMelts = {};
+  final Map<PlayerPosition, List<Melt>> playerMelts = {};
   final Map<PlayerPosition, List<int>> playerFlowers = {};
   final List<int> discards = [];
   
@@ -37,8 +36,23 @@ class MahjongGame {
   int? lastDiscardedTile;
   PlayerPosition? lastDiscarder;
 
+  // UX Improvement: Track last drawn tile
+  Map<PlayerPosition, int?> lastDrawnTiles = {};
+
   PlayerPosition? winner;
   bool isTsumo = false;
+  List<TaiPattern> winningPatterns = [];
+  int totalTai = 0;
+
+  // Game Context
+  int roundWind = 41; // Default to East round
+  Map<PlayerPosition, int> seatWinds = {
+    PlayerPosition.east: 41,
+    PlayerPosition.south: 43,
+    PlayerPosition.west: 45,
+    PlayerPosition.north: 47,
+  };
+  int lianZhuangCount = 0;
 
   Map<PlayerPosition, List<String>> possibleActions = {};
   Map<PlayerPosition, MahjongAction> playerDecisions = {};
@@ -72,6 +86,7 @@ class MahjongGame {
       playerHands[pos] = [];
       playerMelts[pos] = [];
       playerFlowers[pos] = [];
+      lastDrawnTiles[pos] = null;
       for (int i = 0; i < 16; i++) {
         playerHands[pos]!.add(deck.removeAt(0));
       }
@@ -97,10 +112,14 @@ class MahjongGame {
     playerHands[pos]!.sort();
   }
 
+  List<int> _getConcealedTiles(PlayerPosition pos) {
+    return List.from(playerHands[pos]!);
+  }
+
   List<int> _getAllTiles(PlayerPosition pos) {
     List<int> all = List.from(playerHands[pos]!);
     for (var melt in playerMelts[pos]!) {
-      all.addAll(melt);
+      all.addAll(melt.tiles);
     }
     return all;
   }
@@ -110,6 +129,7 @@ class MahjongGame {
 
     print("Player $pos discards $tile");
     playerHands[pos]!.remove(tile);
+    lastDrawnTiles[pos] = null; // Clear drawn tile on discard
     lastDiscardedTile = tile;
     lastDiscarder = pos;
     discards.add(tile);
@@ -152,7 +172,6 @@ class MahjongGame {
     if (state != GameState.waitingForActions) return;
     if (!possibleActions.containsKey(pos)) return;
 
-    // **修正關鍵：如果點擊吃牌但沒給組合，自動抓第一個**
     if (actionType == 'EAT' && eatTiles == null && lastDiscardedTile != null) {
       var options = ActionValidator.getEatOptions(playerHands[pos]!, lastDiscardedTile!);
       if (options.isNotEmpty) eatTiles = options.first;
@@ -180,7 +199,6 @@ class MahjongGame {
       possibleActions.forEach((p, a) { if (a.contains('TSUMO')) wasTsumoAttempt = true; });
 
       if (wasTsumoAttempt) {
-        print("Tsumo passed. Waiting for discard.");
         state = GameState.waitingForDiscard;
         _clearActionState();
       } else {
@@ -196,15 +214,9 @@ class MahjongGame {
     print("Executing ${action.type} for $pos");
 
     if (action.type == 'WIN' || action.type == 'TSUMO') {
-      if (action.type == 'WIN' && lastDiscardedTile != null) {
-        playerHands[pos]!.add(lastDiscardedTile!);
-      }
-      winner = pos;
-      isTsumo = (action.type == 'TSUMO');
-      state = GameState.gameOver;
+      _handleWin(pos, action.type == 'TSUMO');
     } else if (lastDiscardedTile != null) {
       final tile = lastDiscardedTile!;
-      // 牌被拿走了，從棄牌區移除
       if (discards.isNotEmpty && discards.last == tile) {
         discards.removeLast();
       }
@@ -212,16 +224,15 @@ class MahjongGame {
       if (action.type == 'PONG') {
         playerHands[pos]!.remove(tile);
         playerHands[pos]!.remove(tile);
-        playerMelts[pos]!.add([tile, tile, tile]);
+        playerMelts[pos]!.add(Melt(tiles: [tile, tile, tile], type: MeltType.triplet, isExposed: true));
         currentTurn = pos;
         state = GameState.waitingForDiscard;
       } else if (action.type == 'EAT' && action.tiles != null) {
         for (var t in action.tiles!) playerHands[pos]!.remove(t);
-        playerMelts[pos]!.add([...action.tiles!, tile]..sort());
+        playerMelts[pos]!.add(Melt(tiles: [...action.tiles!, tile]..sort(), type: MeltType.sequence, isExposed: true));
         currentTurn = pos;
         state = GameState.waitingForDiscard;
       } else {
-        // 防呆：如果動作沒執行，也得進下一個循環
         _finishDiscardCycle();
         return;
       }
@@ -231,6 +242,35 @@ class MahjongGame {
     }
     
     _clearActionState();
+  }
+
+  void _handleWin(PlayerPosition pos, bool tsumo) {
+    final winningTile = tsumo ? (lastDrawnTiles[pos] ?? playerHands[pos]!.last) : lastDiscardedTile!;
+    final concealed = List<int>.from(playerHands[pos]!);
+    if (!tsumo) concealed.add(winningTile);
+
+    final result = WinLogic.decompose(concealed, playerMelts[pos]!, flowers: playerFlowers[pos]!);
+    if (result != null) {
+      final context = GameContext(
+        roundWind: roundWind,
+        seatWind: seatWinds[pos]!,
+        isDealer: pos == PlayerPosition.east,
+        lianZhuangCount: lianZhuangCount,
+        isTsumo: tsumo,
+        lastTile: winningTile,
+        isSingleWait: _isSingleWait(pos, winningTile),
+      );
+      winningPatterns = TaiCalculator.calculate(result, context);
+      totalTai = winningPatterns.fold(0, (sum, p) => sum + p.tai);
+      
+      winner = pos;
+      isTsumo = tsumo;
+      state = GameState.gameOver;
+    }
+  }
+
+  bool _isSingleWait(PlayerPosition pos, int tile) {
+    return false; 
   }
 
   void _clearActionState() {
@@ -261,13 +301,12 @@ class MahjongGame {
     }
     int newTile = deck.removeAt(0);
     playerHands[pos]!.add(newTile);
+    lastDrawnTiles[pos] = newTile; // Track the new tile
     _processFlowers(pos);
     
     if (WinLogic.isWinning(_getAllTiles(pos))) {
       if (isBot(pos)) {
-        winner = pos;
-        isTsumo = true;
-        state = GameState.gameOver;
+        _handleWin(pos, true);
       } else {
         possibleActions[pos] = ['TSUMO', 'PASS'];
         state = GameState.waitingForActions;
@@ -289,7 +328,7 @@ class MahjongGame {
         String decision = 'PASS';
         if (actions.contains('WIN')) decision = 'WIN';
         else if (actions.contains('TSUMO')) decision = 'TSUMO';
-        else if (actions.contains('PONG')) decision = 'PONG'; // 讓電腦也會碰牌
+        else if (actions.contains('PONG')) decision = 'PONG';
         submitDecision(pos, decision);
       }
     }

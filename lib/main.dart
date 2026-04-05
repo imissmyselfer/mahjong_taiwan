@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:majong_taiwan_core/majong_taiwan_core.dart';
 import 'mahjong_game.dart';
 
 void main() {
@@ -134,13 +135,10 @@ class _MahjongScreenState extends State<MahjongScreen> {
       ),
       child: Column(
         children: [
-          // 頂端資訊
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: Text('輪序: ${_game.currentTurn}', style: const TextStyle(fontSize: 14, color: Colors.white38)),
           ),
-          
-          // 棄牌堆 (海)
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(10),
@@ -153,14 +151,12 @@ class _MahjongScreenState extends State<MahjongScreen> {
                     name: _getTileName(tileId),
                     color: _getTileColor(tileId),
                     isSmall: true,
-                    sizeScale: 0.8, // 棄牌堆使用更小的尺寸
+                    sizeScale: 0.8, 
                   )).toList(),
                 ),
               ),
             ),
           ),
-          
-          // 底部狀態 (最後打出的牌)
           if (_game.state == GameState.gameOver)
             Container(
               padding: const EdgeInsets.all(10),
@@ -169,8 +165,18 @@ class _MahjongScreenState extends State<MahjongScreen> {
               child: Column(
                 children: [
                   const Text('遊戲結束', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.orange)),
+                  const SizedBox(height: 5),
                   Text(_game.winner != null ? '獲勝者: ${_game.winner} ${_game.isTsumo ? "(自摸)" : ""}' : '流局', 
                        style: const TextStyle(fontSize: 16, color: Colors.yellowAccent)),
+                  if (_game.winner != null) ...[
+                    const SizedBox(height: 10),
+                    Text('總計: ${_game.totalTai} 台', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 5),
+                    Wrap(
+                      spacing: 8,
+                      children: _game.winningPatterns.map((p) => Text('${p.name}(${p.tai})', style: const TextStyle(fontSize: 12, color: Colors.white70))).toList(),
+                    ),
+                  ]
                 ],
               ),
             )
@@ -216,7 +222,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
                 decoration: BoxDecoration(border: Border.all(color: Colors.white10)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: m.map((t) => TileWidget(name: _getTileName(t), color: _getTileColor(t), isSmall: true)).toList(),
+                  children: m.tiles.map((t) => TileWidget(name: _getTileName(t), color: _getTileColor(t), isSmall: true)).toList(),
                 ),
               )),
             ],
@@ -238,11 +244,22 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 
   Widget _buildMyHand() {
-    final hand = _game.playerHands[PlayerPosition.east] ?? [];
+    final hand = List<int>.from(_game.playerHands[PlayerPosition.east] ?? []);
+    final lastDrawn = _game.lastDrawnTiles[PlayerPosition.east];
     final melts = _game.playerMelts[PlayerPosition.east] ?? [];
     final flowers = _game.playerFlowers[PlayerPosition.east] ?? [];
     final bool canDiscard = _game.currentTurn == PlayerPosition.east && _game.state == GameState.waitingForDiscard;
     final bool canAct = _game.possibleActions.containsKey(PlayerPosition.east);
+
+    // 如果有最新摸到的牌，將它從一般手牌中分離出來
+    int? drawnTileToShow;
+    if (lastDrawn != null && hand.contains(lastDrawn)) {
+      drawnTileToShow = lastDrawn;
+      hand.remove(lastDrawn);
+      hand.sort(); // 確保其餘手牌順序正確
+    } else {
+      hand.sort(); // 如果沒有剛摸的牌，也保持排序
+    }
 
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 30),
@@ -263,7 +280,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
                     const Text('亮: ', style: TextStyle(fontSize: 12, color: Colors.white38)),
                     ...melts.map((m) => Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: m.map((t) => TileWidget(name: _getTileName(t), color: _getTileColor(t), isSmall: true)).toList(),
+                      children: m.tiles.map((t) => TileWidget(name: _getTileName(t), color: _getTileColor(t), isSmall: true)).toList(),
                     )),
                   ],
                 ],
@@ -274,17 +291,41 @@ class _MahjongScreenState extends State<MahjongScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: hand.map((tileId) => GestureDetector(
-                onTap: () {
-                  if (canDiscard) setState(() => _game.discard(PlayerPosition.east, tileId));
-                },
-                child: TileWidget(
-                  name: _getTileName(tileId), 
-                  color: _getTileColor(tileId), 
-                  isHighlighted: canDiscard,
-                  sizeScale: 1.1,
-                ),
-              )).toList(),
+              children: [
+                // 16張一般手牌
+                ...hand.map((tileId) => GestureDetector(
+                  onTap: () {
+                    // 只有在等待出牌狀態才能點擊普通手牌
+                    if (canDiscard) setState(() => _game.discard(PlayerPosition.east, tileId));
+                  },
+                  child: TileWidget(
+                    name: _getTileName(tileId), 
+                    color: _getTileColor(tileId), 
+                    sizeScale: 1.1,
+                    // 當前不是等待出牌狀態時，外框變暗
+                    borderOverride: canDiscard ? Colors.white24 : Colors.grey.shade600,
+                  ),
+                )),
+                
+                // 最新摸到的牌 (拉開間距並使用亮黃色外框)
+                if (drawnTileToShow != null) ...[
+                  const SizedBox(width: 15),
+                  GestureDetector(
+                    onTap: () {
+                      // 只有在等待出牌狀態才能點擊剛摸到的牌
+                      if (canDiscard) setState(() => _game.discard(PlayerPosition.east, drawnTileToShow!));
+                    },
+                    child: TileWidget(
+                      name: _getTileName(drawnTileToShow), 
+                      color: _getTileColor(drawnTileToShow), 
+                      sizeScale: 1.1,
+                      isHighlighted: true, // 只有最新這張是亮黃色外框
+                      // 如果處於等待動作狀態 (例如自摸決策)，讓它看起來依然可點擊但不是打牌
+                      borderOverride: canAct && !canDiscard ? Colors.blueAccent.shade100 : null,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           if (canAct)
@@ -317,7 +358,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
 class TileWidget extends StatelessWidget {
   final String name;
   final Color color;
-  final bool isHighlighted;
+  final bool isHighlighted; // 是否是剛摸到的牌
+  final Color? borderOverride; // 覆蓋預設邊框顏色 (例如互動提示)
   final bool isSmall;
   final double sizeScale;
 
@@ -326,6 +368,7 @@ class TileWidget extends StatelessWidget {
     required this.name,
     required this.color,
     this.isHighlighted = false,
+    this.borderOverride,
     this.isSmall = false,
     this.sizeScale = 1.0,
   });
@@ -348,10 +391,19 @@ class TileWidget extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(isSmall ? 3 : 6),
         border: Border.all(
-          color: isHighlighted ? Colors.yellowAccent : Colors.grey.shade400, 
+          // 如果是 isHighlighted (剛摸到的牌)，使用亮黃色
+          // 否則，使用 borderOverride (例如可點擊提示) 或預設灰色
+          color: isHighlighted 
+              ? Colors.orangeAccent // 剛摸到的牌使用亮橘黃色
+              : (borderOverride ?? Colors.grey.shade400), 
           width: isHighlighted ? 3 : 2
         ),
-        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(1, 1))],
+        boxShadow: [
+          if (isHighlighted) 
+            // 剛摸到的牌加強陰影效果
+            const BoxShadow(color: Colors.orangeAccent, blurRadius: 8, spreadRadius: 1),
+          const BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(1, 1))
+        ],
       ),
       child: Center(
         child: Text(
