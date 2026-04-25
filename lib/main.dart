@@ -49,6 +49,68 @@ class _MahjongScreenState extends State<MahjongScreen> {
     super.dispose();
   }
 
+  void _handleEatButton() {
+    if (_game.lastDiscardedTile == null) return;
+    final options = ActionValidator.getEatOptions(
+      _game.playerHands[PlayerPosition.east]!,
+      _game.lastDiscardedTile!,
+    );
+    if (options.isEmpty) return;
+
+    if (options.length == 1) {
+      setState(() => _game.submitDecision(PlayerPosition.east, 'EAT', eatTiles: options.first));
+      return;
+    }
+
+    showDialog<List<int>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1B4D3E),
+        title: const Text('選擇吃法', style: TextStyle(color: Colors.white, fontSize: 18)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.map((opt) {
+            final sequence = [...opt, _game.lastDiscardedTile!]..sort();
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => Navigator.of(ctx).pop(opt),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white24),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: sequence.map((t) => TileWidget(
+                      name: _getTileName(t),
+                      color: _getTileColor(t),
+                      isHighlighted: t == _game.lastDiscardedTile,
+                    )).toList(),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('取消', style: TextStyle(color: Colors.white54)),
+          ),
+        ],
+      ),
+    ).then((chosen) {
+      if (chosen != null) {
+        setState(() => _game.submitDecision(PlayerPosition.east, 'EAT', eatTiles: chosen));
+      }
+    });
+  }
+
   void _processGameLoop() {
     if (_game.state == GameState.gameOver) return;
     setState(() {
@@ -342,7 +404,13 @@ class _MahjongScreenState extends State<MahjongScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      onPressed: () => setState(() => _game.submitDecision(PlayerPosition.east, action)),
+                      onPressed: () {
+                        if (action == 'EAT') {
+                          _handleEatButton();
+                        } else {
+                          setState(() => _game.submitDecision(PlayerPosition.east, action));
+                        }
+                      },
                       child: Text(action, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
                   )
