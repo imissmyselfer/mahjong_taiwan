@@ -185,7 +185,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDFDFD), // 乾淨的紙張色
+        color: const Color(0xFFF5F0E8),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFCAD3CD), width: 1),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
@@ -280,7 +280,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFF5F0E8),
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 15, offset: Offset(0, -5))],
       ),
@@ -335,7 +335,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
               children: [
                 ...hand.map((id) => GestureDetector(
                   onTap: () => canDiscard ? setState(() => _game.discard(PlayerPosition.east, id)) : null,
-                  child: TileWidget(tileId: id, borderOverride: canDiscard ? null : Colors.black12),
+                  child: TileWidget(tileId: id, borderOverride: canDiscard ? const Color(0xFF8A9E96) : Colors.black12, borderWidth: canDiscard ? 2.5 : 1),
                 )),
                 if (lastDrawn != null) ...[
                   const SizedBox(width: 12),
@@ -385,6 +385,7 @@ class TileWidget extends StatelessWidget {
   final bool isSmall;
   final double sizeScale;
   final bool isBack;
+  final double? borderWidth;
 
   const TileWidget({
     super.key,
@@ -394,6 +395,7 @@ class TileWidget extends StatelessWidget {
     this.isSmall = false,
     this.sizeScale = 1.0,
     this.isBack = false,
+    this.borderWidth,
   });
 
   @override
@@ -410,16 +412,16 @@ class TileWidget extends StatelessWidget {
       width: w,
       height: h,
       decoration: BoxDecoration(
-        color: isBack ? const Color(0xFF2D4B3E) : Colors.white, // 背牌改為沈穩的墨綠
+        color: isBack ? const Color(0xFF2D4B3E) : const Color(0xFFFDF8EE),
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: isHighlighted ? const Color(0xFFD4AF37) : (borderOverride ?? const Color(0xFFD1D1D1)), width: isHighlighted ? 2 : 1),
+        border: Border.all(color: isHighlighted ? const Color(0xFFD4AF37) : (borderOverride ?? const Color(0xFFD1D1D1)), width: isHighlighted ? 2 : (borderWidth ?? 1)),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.08), offset: const Offset(0, 2), blurRadius: 2),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
-        child: isFlower 
+        child: isFlower
           ? Center(child: Text(_flowerChar(tileId), style: GoogleFonts.notoSerifTc(fontSize: w * 0.5, color: const Color(0xFF7B1FA2), fontWeight: FontWeight.w900)))
           : isBack ? null : Image.asset(imgPath, fit: BoxFit.cover),
       ),
