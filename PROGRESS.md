@@ -23,18 +23,21 @@ Flutter 台灣十六張麻將遊戲，1 人 vs 3 AI，跨平台（Android / Web 
 - [x] 花牌規則（61-68，自動補花）
 - [x] 勝負判定 + 番數顯示（呼叫 `majong_taiwan_core`）
 - [x] 跨平台支援（Android / Linux / Web）
-- [x] 暖象牙色 UI 主題（背景 #DCE7E0 / 牌面 #FDF8EE）
+- [x] 暖象牙色 UI 主題（背景 #DCE7E0 / 桌面 #F5F0E8）
 - [x] 手牌粗框顯示（可出牌時加粗邊框提示）
 - [x] 吃/碰/槓牌組顯示於玩家手牌區
 - [x] 槓牌後補嶺上牌
 - [x] WIN 判斷邏輯修復（`WinLogic.decompose` 正確觸發）
+- [x] 切換 I.MahjongTW 字型（台灣麻將牌風格，Unicode U+1F000–U+1F02B）
+  - 全套牌種統一：萬/筒/索、字牌、花牌（含圖案）、牌背
+  - 移除 FluffyStuff PNG 依賴，改為向量字型渲染
 
 ---
 
 ## 目前狀態
 
 **主分支：master**
-最近 commit：`f90e36d feat: 手牌粗框 + 統一暖象牙色調`
+最近 commit：`ef68e9e feat: 切換台灣麻將牌字型（I.MahjongTW），花牌全面改用字型渲染`
 
 **UI 色彩系統：**
 - 背景：`#DCE7E0`（雅緻青磁色）
