@@ -77,7 +77,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     super.dispose();
   }
 
-  void _handleEatButton() {
+  Future<void> _handleEatButton() async {
     if (_game.lastDiscardedTile == null) return;
     final discarded = _game.lastDiscardedTile!;
     final options = ActionValidator.getEatOptions(
@@ -91,7 +91,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
       return;
     }
 
-    showDialog<List<int>>(
+    final chosen = await showDialog<List<int>>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
@@ -123,6 +123,9 @@ class _MahjongScreenState extends State<MahjongScreen> {
         ),
       ),
     );
+    if (chosen != null && mounted) {
+      setState(() => _game.submitDecision(PlayerPosition.east, 'EAT', eatTiles: chosen));
+    }
   }
 
   void _processGameLoop() {
@@ -261,6 +264,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
 
   Widget _buildMyHand() {
     final hand = List<int>.from(_game.playerHands[PlayerPosition.east] ?? []);
+    final flowers = _game.playerFlowers[PlayerPosition.east] ?? [];
+    final melts = _game.playerMelts[PlayerPosition.east] ?? [];
     final lastDrawn = _game.lastDrawnTiles[PlayerPosition.east];
     final bool canDiscard = _game.currentTurn == PlayerPosition.east && _game.state == GameState.waitingForDiscard;
     final bool canAct = _game.possibleActions.containsKey(PlayerPosition.east);
@@ -273,7 +278,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
@@ -282,6 +287,47 @@ class _MahjongScreenState extends State<MahjongScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (melts.isNotEmpty || flowers.isNotEmpty) ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ...melts.map((melt) => Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F4F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFCAD3CD)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: melt.tiles.map((id) => TileWidget(tileId: id, sizeScale: 0.65, isSmall: true)).toList(),
+                    ),
+                  )),
+                  if (flowers.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5EEF8),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFD7BDE2)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('花 ', style: TextStyle(fontSize: 10, color: Color(0xFF9C6EAA))),
+                          ...flowers.map((id) => TileWidget(tileId: id, sizeScale: 0.65, isSmall: true)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(

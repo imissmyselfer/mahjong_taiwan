@@ -95,7 +95,8 @@ class MahjongGame {
     _draw(currentTurn);
   }
 
-  void _processFlowers(PlayerPosition pos) {
+  int? _processFlowers(PlayerPosition pos) {
+    int? lastReplacement;
     bool hasFlowers = true;
     while (hasFlowers) {
       List<int> flowers = playerHands[pos]!.where((t) => t >= 61).toList();
@@ -105,11 +106,16 @@ class MahjongGame {
         for (var f in flowers) {
           playerHands[pos]!.remove(f);
           playerFlowers[pos]!.add(f);
-          if (deck.isNotEmpty) playerHands[pos]!.add(deck.removeLast());
+          if (deck.isNotEmpty) {
+            final replacement = deck.removeLast();
+            playerHands[pos]!.add(replacement);
+            lastReplacement = replacement;
+          }
         }
       }
     }
     playerHands[pos]!.sort();
+    return lastReplacement;
   }
 
   List<int> _getConcealedTiles(PlayerPosition pos) {
@@ -226,11 +232,22 @@ class MahjongGame {
         playerHands[pos]!.remove(tile);
         playerMelts[pos]!.add(Melt(tiles: [tile, tile, tile], type: MeltType.triplet, isExposed: true));
         currentTurn = pos;
+        _clearActionState();
         state = GameState.waitingForDiscard;
+      } else if (action.type == 'KONG') {
+        playerHands[pos]!.remove(tile);
+        playerHands[pos]!.remove(tile);
+        playerHands[pos]!.remove(tile);
+        playerMelts[pos]!.add(Melt(tiles: [tile, tile, tile, tile], type: MeltType.kong, isExposed: true));
+        currentTurn = pos;
+        _clearActionState();
+        _draw(pos); // 槓後補牌（嶺上牌）
+        return;
       } else if (action.type == 'EAT' && action.tiles != null) {
         for (var t in action.tiles!) playerHands[pos]!.remove(t);
         playerMelts[pos]!.add(Melt(tiles: [...action.tiles!, tile]..sort(), type: MeltType.sequence, isExposed: true));
         currentTurn = pos;
+        _clearActionState();
         state = GameState.waitingForDiscard;
       } else {
         _finishDiscardCycle();
@@ -240,8 +257,6 @@ class MahjongGame {
       _finishDiscardCycle();
       return;
     }
-    
-    _clearActionState();
   }
 
   void _handleWin(PlayerPosition pos, bool tsumo) {
@@ -301,8 +316,9 @@ class MahjongGame {
     }
     int newTile = deck.removeAt(0);
     playerHands[pos]!.add(newTile);
-    lastDrawnTiles[pos] = newTile; // Track the new tile
-    _processFlowers(pos);
+    lastDrawnTiles[pos] = newTile;
+    final replacement = _processFlowers(pos);
+    if (replacement != null) lastDrawnTiles[pos] = replacement;
     
     if (WinLogic.isWinning(_getAllTiles(pos))) {
       if (isBot(pos)) {
