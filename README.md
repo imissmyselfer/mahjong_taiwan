@@ -382,4 +382,17 @@ flutter analyze
 
 ---
 
+## 🖼️ 圖片來源
+
+本專案使用的麻將牌圖檔來源如下：
+
+- **原始圖集：** [FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles)
+  — 開源日本麻將牌圖，提供完整的 PNG 圖集
+- **引用自：** [SyaoranHinata/I.Mahjong](https://github.com/SyaoranHinata/I.Mahjong)
+  — 麻將應用專案，本專案的牌圖即從此處取用
+
+感謝原作者的開源貢獻。
+
+---
+
 *Made with ❤️ for Mahjong lovers worldwide.*
