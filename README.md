@@ -28,9 +28,10 @@
 - **實時手牌管理** — 自動識別並優化手牌組合
 
 ### 🎨 優化的用戶界面
-- **暗色主題設計** — 護眼的深綠色主題，適合長時間遊玩
-- **即時手牌反饋** — 亮起最新抽取的牌，清晰標示玩家操作
+- **暖象牙色主題** — 牌面 #FDF8EE、桌面 #F5F0E8，舒適自然的視覺風格
+- **即時手牌反饋** — 新摸牌金色邊框高亮，可出牌時加粗灰框提示
 - **互動式牌池展示** — 實時顯示所有棄牌（海），便於分析
+- **吃牌選擇 Dialog** — 多種吃法時彈出選牌介面，操作清晰
 - **跨平台響應式設計** — 在 Android、Web、Linux 上保持一致體驗
 
 ### 📱 跨平台支援
@@ -109,6 +110,9 @@ flutter build web --release
 
 #### 🖥️ Linux
 ```bash
+# 先安裝系統依賴（Ubuntu / Debian）
+sudo apt-get install libgtk-3-dev clang cmake ninja-build pkg-config
+
 flutter run -d linux
 
 # 或編譯可執行檔
@@ -138,10 +142,11 @@ majong_taiwan_android/
 ### 核心文件說明
 
 #### **lib/main.dart**
-- `MahjongApp` — 應用根組件，配置主題（深綠色暗黑主題）
+- `MahjongApp` — 應用根組件，配置暖象牙色主題
 - `MahjongScreen` — 遊戲主屏幕，處理 UI 渲染和玩家交互
 - `_processGameLoop()` — 1500ms 定時遊戲循環，驅動 AI 自動操作
-- 牌面轉換函數 — `_getTileName()` 和 `_getTileColor()` 用於牌的顯示
+- `TileWidget` — 牌面 Widget，使用 PNG 圖檔 + 花牌漢字渲染
+- `_tileAssetPath()` — 牌 ID 轉 assets/tiles/ 路徑
 
 #### **lib/mahjong_game.dart**
 - `MahjongGame` — 核心遊戲引擎，管理：
@@ -178,8 +183,8 @@ majong_taiwan_android/
 
 ```
 1. 遊戲初始化
-   └─ 初始化牌堆（136 張牌）
-   └─ 洗牌並發牌（每人 13 張 + 莊家多抽 1 張）
+   └─ 初始化牌堆（136 張牌：108 數牌 + 16 字牌 + 12 三元 / 含 8 張花牌）
+   └─ 洗牌並發牌（每人 16 張，自動補花後東家額外摸 1 張）
 
 2. 主遊戲循環（每 1500ms 執行一次）
    ├─ 自動處理所有待定動作（碰、杠、吃）
