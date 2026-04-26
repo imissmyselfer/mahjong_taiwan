@@ -268,7 +268,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     final melts = _game.playerMelts[PlayerPosition.east] ?? [];
     final lastDrawn = _game.lastDrawnTiles[PlayerPosition.east];
     final bool canDiscard = _game.currentTurn == PlayerPosition.east && _game.state == GameState.waitingForDiscard;
-    final bool canAct = _game.possibleActions.containsKey(PlayerPosition.east);
+    final bool canAct = _game.state != GameState.gameOver && _game.possibleActions.containsKey(PlayerPosition.east);
 
     if (lastDrawn != null && hand.contains(lastDrawn)) {
       hand.remove(lastDrawn);

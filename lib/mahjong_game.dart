@@ -157,8 +157,8 @@ class MahjongGame {
       if (pos == discarder) continue;
       
       List<String> actions = [];
-      List<int> allTiles = _getAllTiles(pos)..add(tile);
-      if (WinLogic.isWinning(allTiles)) actions.add('WIN');
+      final handWithTile = List<int>.from(playerHands[pos]!)..add(tile);
+      if (WinLogic.decompose(handWithTile, playerMelts[pos]!, flowers: playerFlowers[pos]!) != null) actions.add('WIN');
       if (ActionValidator.canPong(playerHands[pos]!, tile)) actions.add('PONG');
       if (ActionValidator.canKong(playerHands[pos]!, tile)) actions.add('KONG');
       if (pos == _getNextPlayer(discarder)) {
@@ -185,6 +185,12 @@ class MahjongGame {
 
     print("Player $pos submits $actionType");
     playerDecisions[pos] = MahjongAction(pos, actionType, tiles: eatTiles);
+
+    // WIN/TSUMO 是最高優先級，可以立即結算，不必等其他玩家決定
+    if (actionType == 'WIN' || actionType == 'TSUMO') {
+      _resolveActions();
+      return;
+    }
 
     if (playerDecisions.length >= possibleActions.length) {
       _resolveActions();
@@ -277,10 +283,13 @@ class MahjongGame {
       );
       winningPatterns = TaiCalculator.calculate(result, context);
       totalTai = winningPatterns.fold(0, (sum, p) => sum + p.tai);
-      
+
+      _clearActionState();
       winner = pos;
       isTsumo = tsumo;
       state = GameState.gameOver;
+    } else {
+      print("WIN decompose failed for $pos — hand: $concealed, melts: ${playerMelts[pos]}");
     }
   }
 
@@ -320,7 +329,7 @@ class MahjongGame {
     final replacement = _processFlowers(pos);
     if (replacement != null) lastDrawnTiles[pos] = replacement;
     
-    if (WinLogic.isWinning(_getAllTiles(pos))) {
+    if (WinLogic.decompose(playerHands[pos]!, playerMelts[pos]!, flowers: playerFlowers[pos]!) != null) {
       if (isBot(pos)) {
         _handleWin(pos, true);
       } else {
