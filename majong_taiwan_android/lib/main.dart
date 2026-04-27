@@ -156,7 +156,10 @@ class _MahjongScreenState extends State<MahjongScreen> {
     final prevState = _game.state;
     setState(() {
       _game.autoProcessActions();
-      if (_game.state == GameState.waitingForDiscard && _game.isBot(_game.currentTurn)) {
+      // 標籤剛設好時（bot 剛碰/槓/吃），這一 tick 不出牌，讓 UI 顯示標籤
+      if (_game.state == GameState.waitingForDiscard &&
+          _game.isBot(_game.currentTurn) &&
+          _game.lastActionLabels.isEmpty) {
         _game.botAutoDiscard();
       }
     });
@@ -165,9 +168,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
       _playSound('discard');
     }
     // AI 碰/槓/吃聲
-    if (prevState == GameState.waitingForActions && _game.state == GameState.waitingForDiscard) {
-      final acted = _game.lastActionLabels.values.any((v) => v != null);
-      if (acted) _playSound('action');
+    if (_game.lastActionLabels.values.any((v) => v != null)) {
+      _playSound('action');
     }
     // 胡牌聲
     if (_game.state == GameState.gameOver && prevState != GameState.gameOver) {

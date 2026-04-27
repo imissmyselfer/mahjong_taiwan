@@ -57,6 +57,8 @@ class MahjongGame {
   Map<PlayerPosition, List<String>> possibleActions = {};
   Map<PlayerPosition, MahjongAction> playerDecisions = {};
   Map<PlayerPosition, String?> lastActionLabels = {};
+  int _labelTicks = 0;
+  static const int _labelKeepTicks = 3; // 3 × 1500ms = 4.5 秒
 
   MahjongGame() {
     _initializeDeck();
@@ -135,7 +137,6 @@ class MahjongGame {
     if (state != GameState.waitingForDiscard || pos != currentTurn) return;
 
     print("Player $pos discards $tile");
-    lastActionLabels.clear();
     playerHands[pos]!.remove(tile);
     lastDrawnTiles[pos] = null; // Clear drawn tile on discard
     lastDiscardedTile = tile;
@@ -249,7 +250,7 @@ class MahjongGame {
       playerMelts[pos]!.add(Melt(tiles: [tile, tile, tile, tile], type: MeltType.kong, isExposed: false));
     }
 
-    lastActionLabels[pos] = 'KONG';
+    _setActionLabel(pos, 'KONG');
     currentTurn = pos;
     _draw(pos); // 補嶺上牌
   }
@@ -283,7 +284,7 @@ class MahjongGame {
     print("Executing ${action.type} for $pos");
 
     if (action.type == 'WIN' || action.type == 'TSUMO') {
-      lastActionLabels[pos] = action.type;
+      _setActionLabel(pos, action.type);
       _handleWin(pos, action.type == 'TSUMO');
     } else if (lastDiscardedTile != null) {
       final tile = lastDiscardedTile!;
@@ -295,7 +296,7 @@ class MahjongGame {
         playerHands[pos]!.remove(tile);
         playerHands[pos]!.remove(tile);
         playerMelts[pos]!.add(Melt(tiles: [tile, tile, tile], type: MeltType.triplet, isExposed: true));
-        lastActionLabels[pos] = 'PONG';
+        _setActionLabel(pos, 'PONG');
         currentTurn = pos;
         _clearActionState();
         state = GameState.waitingForDiscard;
@@ -304,7 +305,7 @@ class MahjongGame {
         playerHands[pos]!.remove(tile);
         playerHands[pos]!.remove(tile);
         playerMelts[pos]!.add(Melt(tiles: [tile, tile, tile, tile], type: MeltType.kong, isExposed: true));
-        lastActionLabels[pos] = 'KONG';
+        _setActionLabel(pos, 'KONG');
         currentTurn = pos;
         _clearActionState();
         _draw(pos); // 槓後補牌（嶺上牌）
@@ -312,7 +313,7 @@ class MahjongGame {
       } else if (action.type == 'EAT' && action.tiles != null) {
         for (var t in action.tiles!) playerHands[pos]!.remove(t);
         playerMelts[pos]!.add(Melt(tiles: [...action.tiles!, tile]..sort(), type: MeltType.sequence, isExposed: true));
-        lastActionLabels[pos] = 'EAT';
+        _setActionLabel(pos, 'EAT');
         currentTurn = pos;
         _clearActionState();
         state = GameState.waitingForDiscard;
@@ -417,7 +418,17 @@ class MahjongGame {
 
   bool isBot(PlayerPosition pos) => pos != PlayerPosition.east;
 
+  void _setActionLabel(PlayerPosition pos, String label) {
+    lastActionLabels[pos] = label;
+    _labelTicks = _labelKeepTicks;
+  }
+
   void autoProcessActions() {
+    if (_labelTicks > 0) {
+      _labelTicks--;
+      if (_labelTicks == 0) lastActionLabels.clear();
+      return;
+    }
     if (state != GameState.waitingForActions) return;
     
     final playersToAct = possibleActions.keys.toList();
