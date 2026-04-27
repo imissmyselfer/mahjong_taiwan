@@ -56,6 +56,7 @@ class MahjongGame {
 
   Map<PlayerPosition, List<String>> possibleActions = {};
   Map<PlayerPosition, MahjongAction> playerDecisions = {};
+  Map<PlayerPosition, String?> lastActionLabels = {};
 
   MahjongGame() {
     _initializeDeck();
@@ -134,6 +135,7 @@ class MahjongGame {
     if (state != GameState.waitingForDiscard || pos != currentTurn) return;
 
     print("Player $pos discards $tile");
+    lastActionLabels.clear();
     playerHands[pos]!.remove(tile);
     lastDrawnTiles[pos] = null; // Clear drawn tile on discard
     lastDiscardedTile = tile;
@@ -178,6 +180,19 @@ class MahjongGame {
     if (state != GameState.waitingForActions) return;
     if (!possibleActions.containsKey(pos)) return;
 
+    // 自摸槓情境（暗槓/加槓）：無棄牌時的槓/過
+    if (lastDiscardedTile == null && (actionType == 'KONG' || actionType == 'PASS')) {
+      possibleActions.clear();
+      playerDecisions.clear();
+      if (actionType == 'KONG') {
+        final tiles = _getSelfKongTiles(pos);
+        if (tiles.isNotEmpty) _executeSelfKong(pos, tiles.first);
+      } else {
+        state = GameState.waitingForDiscard;
+      }
+      return;
+    }
+
     if (actionType == 'EAT' && eatTiles == null && lastDiscardedTile != null) {
       var options = ActionValidator.getEatOptions(playerHands[pos]!, lastDiscardedTile!);
       if (options.isNotEmpty) eatTiles = options.first;
@@ -195,6 +210,48 @@ class MahjongGame {
     if (playerDecisions.length >= possibleActions.length) {
       _resolveActions();
     }
+  }
+
+  List<int> _getSelfKongTiles(PlayerPosition pos) {
+    final hand = playerHands[pos]!;
+    final result = <int>[];
+
+    // 暗槓：手上四張相同
+    final counts = <int, int>{};
+    for (var t in hand) counts[t] = (counts[t] ?? 0) + 1;
+    for (var entry in counts.entries) {
+      if (entry.value == 4) result.add(entry.key);
+    }
+
+    // 加槓：已碰的三張 + 手上有第四張
+    for (var melt in playerMelts[pos]!) {
+      if (melt.type == MeltType.triplet && melt.isExposed) {
+        final tile = melt.tiles[0];
+        if (hand.contains(tile) && !result.contains(tile)) result.add(tile);
+      }
+    }
+
+    return result;
+  }
+
+  void _executeSelfKong(PlayerPosition pos, int tile) {
+    final meltIndex = playerMelts[pos]!.indexWhere(
+      (m) => m.type == MeltType.triplet && m.isExposed && m.tiles[0] == tile,
+    );
+
+    if (meltIndex >= 0) {
+      // 加槓：把碰牌組升級為槓
+      playerHands[pos]!.remove(tile);
+      playerMelts[pos]![meltIndex] = Melt(tiles: [tile, tile, tile, tile], type: MeltType.kong, isExposed: true);
+    } else {
+      // 暗槓：從手牌移除四張
+      for (int i = 0; i < 4; i++) playerHands[pos]!.remove(tile);
+      playerMelts[pos]!.add(Melt(tiles: [tile, tile, tile, tile], type: MeltType.kong, isExposed: false));
+    }
+
+    lastActionLabels[pos] = 'KONG';
+    currentTurn = pos;
+    _draw(pos); // 補嶺上牌
   }
 
   void _resolveActions() {
@@ -226,6 +283,7 @@ class MahjongGame {
     print("Executing ${action.type} for $pos");
 
     if (action.type == 'WIN' || action.type == 'TSUMO') {
+      lastActionLabels[pos] = action.type;
       _handleWin(pos, action.type == 'TSUMO');
     } else if (lastDiscardedTile != null) {
       final tile = lastDiscardedTile!;
@@ -237,6 +295,7 @@ class MahjongGame {
         playerHands[pos]!.remove(tile);
         playerHands[pos]!.remove(tile);
         playerMelts[pos]!.add(Melt(tiles: [tile, tile, tile], type: MeltType.triplet, isExposed: true));
+        lastActionLabels[pos] = 'PONG';
         currentTurn = pos;
         _clearActionState();
         state = GameState.waitingForDiscard;
@@ -245,6 +304,7 @@ class MahjongGame {
         playerHands[pos]!.remove(tile);
         playerHands[pos]!.remove(tile);
         playerMelts[pos]!.add(Melt(tiles: [tile, tile, tile, tile], type: MeltType.kong, isExposed: true));
+        lastActionLabels[pos] = 'KONG';
         currentTurn = pos;
         _clearActionState();
         _draw(pos); // 槓後補牌（嶺上牌）
@@ -252,6 +312,7 @@ class MahjongGame {
       } else if (action.type == 'EAT' && action.tiles != null) {
         for (var t in action.tiles!) playerHands[pos]!.remove(t);
         playerMelts[pos]!.add(Melt(tiles: [...action.tiles!, tile]..sort(), type: MeltType.sequence, isExposed: true));
+        lastActionLabels[pos] = 'EAT';
         currentTurn = pos;
         _clearActionState();
         state = GameState.waitingForDiscard;
@@ -336,9 +397,22 @@ class MahjongGame {
         possibleActions[pos] = ['TSUMO', 'PASS'];
         state = GameState.waitingForActions;
       }
-    } else {
-      state = GameState.waitingForDiscard;
+      return;
     }
+
+    // 暗槓 / 加槓
+    final selfKongTiles = _getSelfKongTiles(pos);
+    if (selfKongTiles.isNotEmpty) {
+      if (isBot(pos)) {
+        _executeSelfKong(pos, selfKongTiles.first);
+      } else {
+        possibleActions[pos] = ['KONG', 'PASS'];
+        state = GameState.waitingForActions;
+      }
+      return;
+    }
+
+    state = GameState.waitingForDiscard;
   }
 
   bool isBot(PlayerPosition pos) => pos != PlayerPosition.east;
