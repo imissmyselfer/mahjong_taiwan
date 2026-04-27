@@ -59,6 +59,7 @@ class MahjongGame {
   Map<PlayerPosition, String?> lastActionLabels = {};
   int _labelTicks = 0;
   static const int _labelKeepTicks = 3; // 3 × 1500ms = 4.5 秒
+  bool get isNewActionLabel => _labelTicks == _labelKeepTicks;
 
   MahjongGame() {
     _initializeDeck();

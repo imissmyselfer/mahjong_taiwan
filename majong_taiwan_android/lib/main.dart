@@ -167,8 +167,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
     if (prevState == GameState.waitingForDiscard && _game.state == GameState.waitingForActions) {
       _playSound('discard');
     }
-    // AI 碰/槓/吃聲
-    if (_game.lastActionLabels.values.any((v) => v != null)) {
+    // AI 碰/槓/吃聲（只在標籤剛設好的那一 tick 播一次）
+    if (_game.isNewActionLabel) {
       _playSound('action');
     }
     // 胡牌聲
