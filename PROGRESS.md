@@ -1,6 +1,6 @@
 # PROGRESS.md — 麻將台灣 Android
 
-最後更新：2026-04-26（Session 3）
+最後更新：2026-04-26（Session 4）
 
 ---
 
@@ -28,16 +28,17 @@ Flutter 台灣十六張麻將遊戲，1 人 vs 3 AI，跨平台（Android / Web 
 - [x] 吃/碰/槓牌組顯示於玩家手牌區
 - [x] 槓牌後補嶺上牌
 - [x] WIN 判斷邏輯修復（`WinLogic.decompose` 正確觸發）
-- [x] 切換 I.MahjongTW 字型（台灣麻將牌風格，Unicode U+1F000–U+1F02B）
-  - 全套牌種統一：萬/筒/索、字牌、花牌（含圖案）、牌背
-  - 移除 FluffyStuff PNG 依賴，改為向量字型渲染
+- [x] 牌圖改回 SVG/PNG 混合渲染
+  - 萬/筒/索/字牌/牌背：原有 PNG（FluffyStuff）
+  - 花牌（春夏秋冬梅蘭竹菊）：新生成 flower1–8.svg（彩色 SVG）
+  - 移除 I.MahjongTW 字型依賴（Inkscape SVG 含 filter/marker，flutter_svg 不支援）
 
 ---
 
 ## 目前狀態
 
 **主分支：master**
-最近 commit：`ef68e9e feat: 切換台灣麻將牌字型（I.MahjongTW），花牌全面改用字型渲染`
+最近 commit：`5674a47 feat: 改回 SVG/PNG 牌圖渲染，花牌改用新 SVG`
 
 **UI 色彩系統：**
 - 背景：`#DCE7E0`（雅緻青磁色）
