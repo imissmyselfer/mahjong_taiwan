@@ -1,0 +1,21 @@
+# Flutter / Dart
+**/doc/api/
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
+**/pubspec.lock
+**/coverage/
+
+# Misc
+.DS_Store
+*.log
+*.pyc
+*.swp
+.idea/
+*.iml
+
+# Dev-only files
+**/PROGRESS.md
+**/tile_design_preview.html
