@@ -154,12 +154,27 @@ class _MahjongScreenState extends State<MahjongScreen> {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            _buildOtherPlayerHand(PlayerPosition.north, '北家'),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 100),
+              child: ClipRect(child: _buildOtherPlayerHand(PlayerPosition.north, '北家')),
+            ),
             Expanded(
               child: Row(
                 children: [
                   _buildSidePlayer(PlayerPosition.west, '西家', 1),
-                  Expanded(child: _buildTableCenter()),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(child: _buildTableCenter()),
+                        if (_game.state != GameState.gameOver &&
+                            _game.possibleActions.containsKey(PlayerPosition.east))
+                          Positioned(
+                            left: 0, right: 0, bottom: 12,
+                            child: _buildActionButtons(),
+                          ),
+                      ],
+                    ),
+                  ),
                   _buildSidePlayer(PlayerPosition.south, '南家', 3),
                 ],
               ),
@@ -172,12 +187,59 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 
   Widget _buildSidePlayer(PlayerPosition pos, String name, int turns) {
+    final melts = _game.playerMelts[pos] ?? [];
+    final flowers = _game.playerFlowers[pos] ?? [];
     return SizedBox(
-      width: 90,
-      child: RotatedBox(
-        quarterTurns: turns,
-        child: Center(child: _buildOtherPlayerHand(pos, name)),
+      width: 110,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (melts.isNotEmpty || flowers.isNotEmpty) ...[
+            _buildSideMelts(melts, flowers),
+            const SizedBox(height: 6),
+          ],
+          ClipRect(
+            child: RotatedBox(
+              quarterTurns: turns,
+              child: Center(child: _buildOtherPlayerHand(pos, name, showMelts: false)),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildSideMelts(List<Melt> melts, List<int> flowers) {
+    return Wrap(
+      spacing: 3,
+      runSpacing: 3,
+      alignment: WrapAlignment.center,
+      children: [
+        ...melts.map((melt) => Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0F4F2),
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: const Color(0xFFCAD3CD)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: melt.tiles.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.55)).toList(),
+          ),
+        )),
+        if (flowers.isNotEmpty) Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5EEF8),
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: const Color(0xFFD7BDE2)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: flowers.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.55)).toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -203,7 +265,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(8),
               child: Wrap(
-                alignment: WrapAlignment.center,
+                alignment: WrapAlignment.start,
                 spacing: 2,
                 runSpacing: 2,
                 children: _game.discards.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.75)).toList(),
@@ -218,6 +280,57 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 
   Widget _buildGameOverInfo() {
+    final winner = _game.winner;
+    final showHand = winner != null && winner != PlayerPosition.east;
+
+    List<Widget> handWidgets = [];
+    if (showHand) {
+      final hand = List<int>.from(_game.playerHands[winner] ?? [])..sort();
+      final melts = _game.playerMelts[winner] ?? [];
+      final flowers = _game.playerFlowers[winner] ?? [];
+
+      handWidgets = [
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ...melts.map((melt) => Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F4F2),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFCAD3CD)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: melt.tiles.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.8)).toList(),
+                ),
+              )),
+              ...hand.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.8)),
+              if (flowers.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5EEF8),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFD7BDE2)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: flowers.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.8)).toList(),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ];
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       width: double.infinity,
@@ -228,7 +341,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
       child: Column(
         children: [
           const Text('遊戲結束', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A6759))),
-          Text(_game.winner != null ? '獲勝: ${_game.winner!.name}' : '流局', style: const TextStyle(fontSize: 14)),
+          Text(winner != null ? '獲勝: ${winner.name}' : '流局', style: const TextStyle(fontSize: 14)),
+          ...handWidgets,
         ],
       ),
     );
@@ -247,8 +361,11 @@ class _MahjongScreenState extends State<MahjongScreen> {
     );
   }
 
-  Widget _buildOtherPlayerHand(PlayerPosition pos, String name) {
+  Widget _buildOtherPlayerHand(PlayerPosition pos, String name, {bool showMelts = true}) {
     final handCount = _game.playerHands[pos]?.length ?? 0;
+    final melts = showMelts ? (_game.playerMelts[pos] ?? []) : <Melt>[];
+    final flowers = showMelts ? (_game.playerFlowers[pos] ?? []) : <int>[];
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -258,6 +375,39 @@ class _MahjongScreenState extends State<MahjongScreen> {
           spacing: -14,
           children: List.generate(handCount, (_) => const TileWidget(tileId: -1, isBack: true, isSmall: true, sizeScale: 0.65)),
         ),
+        if (melts.isNotEmpty || flowers.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              ...melts.map((melt) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F4F2),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFCAD3CD)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: melt.tiles.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.65)).toList(),
+                ),
+              )),
+              if (flowers.isNotEmpty) Container(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5EEF8),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFD7BDE2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: flowers.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.65)).toList(),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -268,7 +418,6 @@ class _MahjongScreenState extends State<MahjongScreen> {
     final melts = _game.playerMelts[PlayerPosition.east] ?? [];
     final lastDrawn = _game.lastDrawnTiles[PlayerPosition.east];
     final bool canDiscard = _game.currentTurn == PlayerPosition.east && _game.state == GameState.waitingForDiscard;
-    final bool canAct = _game.state != GameState.gameOver && _game.possibleActions.containsKey(PlayerPosition.east);
 
     if (lastDrawn != null && hand.contains(lastDrawn)) {
       hand.remove(lastDrawn);
@@ -277,8 +426,14 @@ class _MahjongScreenState extends State<MahjongScreen> {
       hand.sort();
     }
 
+    // landscape 手機 shortestSide < 480 → compact 模式縮小牌和 padding
+    final bool compact = MediaQuery.of(context).size.shortestSide < 480;
+    final double meltScale = compact ? 0.65 : 0.85;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: compact
+          ? const EdgeInsets.fromLTRB(16, 8, 16, 16)
+          : const EdgeInsets.fromLTRB(16, 12, 16, 32),
       decoration: const BoxDecoration(
         color: Color(0xFFF5F0E8),
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
@@ -303,7 +458,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: melt.tiles.map((id) => TileWidget(tileId: id)).toList(),
+                      children: melt.tiles.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: meltScale)).toList(),
                     ),
                   )),
                   if (flowers.isNotEmpty) ...[
@@ -318,7 +473,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text('花 ', style: TextStyle(fontSize: 10, color: Color(0xFF9C6EAA))),
-                          ...flowers.map((id) => TileWidget(tileId: id)),
+                          ...flowers.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: meltScale)),
                         ],
                       ),
                     ),
@@ -326,7 +481,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
           ],
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -347,7 +502,6 @@ class _MahjongScreenState extends State<MahjongScreen> {
               ],
             ),
           ),
-          if (canAct) _buildActionButtons(),
         ],
       ),
     );
@@ -400,7 +554,10 @@ class TileWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double w = (isSmall ? 32.0 : 48.0) * sizeScale;
+    final double shortest = MediaQuery.of(context).size.shortestSide;
+    final double baseNormal = shortest > 800 ? 64.0 : (shortest > 480 ? 48.0 : 36.0);
+    final double baseSmall  = shortest > 800 ? 44.0 : (shortest > 480 ? 32.0 : 24.0);
+    final double w = (isSmall ? baseSmall : baseNormal) * sizeScale;
     final double h = w * 1.35;
     final double radius = isSmall ? 4.0 : 6.0;
 

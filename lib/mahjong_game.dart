@@ -354,6 +354,8 @@ class MahjongGame {
         if (actions.contains('WIN')) decision = 'WIN';
         else if (actions.contains('TSUMO')) decision = 'TSUMO';
         else if (actions.contains('PONG')) decision = 'PONG';
+        else if (actions.contains('KONG')) decision = 'KONG';
+        else if (actions.contains('EAT')) decision = 'EAT';
         submitDecision(pos, decision);
       }
     }
