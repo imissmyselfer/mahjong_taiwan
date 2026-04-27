@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>麻將牌設計稿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background:
+    radial-gradient(ellipse at 30% 20%, #2D7A50 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, #1A5235 0%, transparent 50%),
+    #1B4D3E;
+  font-family: 'Noto Serif TC', 'Noto Sans TC', serif;
+  min-height: 100vh;
+  padding: 40px 32px 60px;
+  color: #E8DDB5;
+}
+
+/* ── HEADER ── */
+header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+header h1 {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: #F0E8C8;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  margin-bottom: 6px;
+}
+header p { font-size: 12px; opacity: 0.4; letter-spacing: 3px; }
+
+/* ── SECTION ── */
+.section { margin-bottom: 36px; }
+.section-label {
+  font-size: 11px;
+  letter-spacing: 3px;
+  opacity: 0.45;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  border-left: 2px solid rgba(255,255,255,0.2);
+  padding-left: 10px;
+}
+.tile-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+/* ══════════════════════════════
+   BASE TILE
+══════════════════════════════ */
+.tile {
+  position: relative;
+  width: 52px;
+  height: 76px;
+  border-radius: 6px 6px 5px 5px;
+  background: linear-gradient(160deg,
+    #FEFCF0 0%,
+    #F7F0D8 25%,
+    #EFE4BC 60%,
+    #E6D8A4 100%
+  );
+  border: 1.5px solid #C8A848;
+  border-bottom-color: #A07828;
+  /* 3D depth layers */
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.85),
+    inset 1px 0 3px rgba(255,255,255,0.4),
+    inset -1px 0 2px rgba(0,0,0,0.05),
+    0 1px 0 #B89030,
+    0 2px 0 #A07820,
+    0 3px 0 #886010,
+    0 4px 0 #705000,
+    0 6px 8px rgba(0,0,0,0.45),
+    2px 2px 4px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  user-select: none;
+}
+
+/* Inner frame inset effect */
+.tile::before {
+  content: '';
+  position: absolute;
+  inset: 3px 3px 3px 3px;
+  border-radius: 3px;
+  border: 1px solid rgba(180,150,60,0.25);
+  pointer-events: none;
+}
+
+.tile:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.85),
+    inset 1px 0 3px rgba(255,255,255,0.4),
+    0 1px 0 #B89030,
+    0 2px 0 #A07820,
+    0 3px 0 #886010,
+    0 4px 0 #705000,
+    0 8px 16px rgba(0,0,0,0.55),
+    3px 3px 6px rgba(0,0,0,0.25);
+}
+
+/* ── HIGHLIGHTED: 剛摸到的牌 ── */
+.tile.highlighted {
+  background: linear-gradient(160deg,
+    #FFFEF5 0%,
+    #FFFAD8 25%,
+    #FFE890 60%,
+    #FFD840 100%
+  );
+  border-color: #E8A000;
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.95),
+    0 0 0 2.5px #FFB800,
+    0 0 16px 6px rgba(255,185,0,0.55),
+    0 1px 0 #C88000,
+    0 2px 0 #A86800,
+    0 3px 0 #885000,
+    0 4px 0 #683800,
+    0 8px 14px rgba(0,0,0,0.5);
+  transform: translateY(-6px);
+  animation: glow-pulse 1.8s ease-in-out infinite;
+}
+@keyframes glow-pulse {
+  0%,100% { box-shadow: inset 0 2px 4px rgba(255,255,255,0.95), 0 0 0 2.5px #FFB800, 0 0 16px 6px rgba(255,185,0,0.55), 0 1px 0 #C88000, 0 2px 0 #A86800, 0 3px 0 #885000, 0 4px 0 #683800, 0 8px 14px rgba(0,0,0,0.5); }
+  50%       { box-shadow: inset 0 2px 4px rgba(255,255,255,0.95), 0 0 0 2.5px #FFB800, 0 0 28px 10px rgba(255,185,0,0.75), 0 1px 0 #C88000, 0 2px 0 #A86800, 0 3px 0 #885000, 0 4px 0 #683800, 0 8px 14px rgba(0,0,0,0.5); }
+}
+
+/* ── SELECTED ── */
+.tile.selected {
+  background: linear-gradient(160deg,
+    #F0F8FF 0%,
+    #D8EEFF 25%,
+    #B0D4FF 60%,
+    #84BBFF 100%
+  );
+  border-color: #3A8EFF;
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.95),
+    0 0 0 2.5px #3A8EFF,
+    0 0 14px 4px rgba(58,142,255,0.45),
+    0 1px 0 #2070D8,
+    0 2px 0 #1060C0,
+    0 3px 0 #0850A8,
+    0 4px 0 #043888,
+    0 8px 14px rgba(0,0,0,0.5);
+  transform: translateY(-6px);
+}
+
+/* ══════════════════════════════
+   TILE CONTENT
+══════════════════════════════ */
+.tile-num {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.08);
+}
+.tile-suit-label {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 2px;
+  opacity: 0.75;
+}
+.tile-single {
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.1);
+}
+.tile-flower-label {
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.55;
+  margin-top: 1px;
+  letter-spacing: 0.5px;
+}
+
+/* 白板 special */
+.bai-border {
+  width: 28px;
+  height: 36px;
+  border: 2.5px solid #8090B0;
+  border-radius: 3px;
+  background: transparent;
+}
+
+/* Suit colors */
+.wan   { color: #B01825; }
+.tong  { color: #0A4E8A; }
+.tiao  { color: #0A6020; }
+.wind  { color: #2A2418; }
+.zhong { color: #C01010; }
+.fa    { color: #0A5E18; }
+.flower-color { color: #7A2A9A; }
+
+/* ══════════════════════════════
+   FACE-DOWN TILE (bot hand)
+══════════════════════════════ */
+.tile.back {
+  background: linear-gradient(150deg, #2A6840 0%, #1E5030 50%, #163C24 100%);
+  border-color: #4A9060;
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.15),
+    0 1px 0 #4A9060,
+    0 2px 0 #386848,
+    0 3px 0 #285838,
+    0 4px 0 #1A4028,
+    0 6px 8px rgba(0,0,0,0.45);
+  cursor: default;
+  overflow: hidden;
+}
+.tile.back::before { border-color: rgba(255,255,255,0.08); }
+.tile.back::after {
+  content: '🀫';
+  font-size: 34px;
+  opacity: 0.5;
+  filter: hue-rotate(80deg) brightness(0.8);
+}
+
+/* ══════════════════════════════
+   SMALL TILE (AI player display)
+══════════════════════════════ */
+.tile.sm {
+  width: 34px;
+  height: 50px;
+}
+.tile.sm .tile-num   { font-size: 18px; }
+.tile.sm .tile-suit-label { font-size: 9px; }
+.tile.sm .tile-single { font-size: 20px; }
+.tile.sm .tile-flower-label { font-size: 7px; }
+.tile.sm .bai-border { width: 18px; height: 24px; border-width: 2px; }
+.tile.sm::before { inset: 2px; }
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  margin: 12px 0 36px;
+}
+
+/* ── STATES DEMO ── */
+.states-demo {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.state-block { text-align: center; }
+.state-label {
+  font-size: 10px;
+  opacity: 0.4;
+  letter-spacing: 2px;
+  margin-top: 14px;
+  text-transform: uppercase;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>台灣麻將 牌面設計</h1>
+  <p>TILE DESIGN PREVIEW · TAIWAN MAHJONG</p>
+</header>
+
+<!-- 萬 suit -->
+<div class="section">
+  <div class="section-label">萬子牌 · Characters</div>
+  <div class="tile-row">
+    <div class="tile"><span class="tile-num wan">一</span><span class="tile-suit-label wan">萬</span></div>
+    <div class="tile"><span class="tile-num wan">二</span><span class="tile-suit-label wan">萬</span></div>
+    <div class="tile"><span class="tile-num wan">三</span><span class="tile-suit-label wan">萬</span></div>
+    <div class="tile"><span class="tile-num wan">四</span><span class="tile-suit-label wan">萬</span></div>
+    <div class="tile"><span class="tile-num wan">五</span><span class="tile-suit-label wan">萬</span></div>
+    <div class="tile"><span class="tile-num wan">六</span><span class="tile-suit-label wan">萬</span></div>
+    <div class="tile"><span class="tile-num wan">七</span><span class="tile-suit-label wan">萬</span></div>
+    <div class="tile"><span class="tile-num wan">八</span><span class="tile-suit-label wan">萬</span></div>
+    <div class="tile"><span class="tile-num wan">九</span><span class="tile-suit-label wan">萬</span></div>
+  </div>
+</div>
+
+<!-- 筒 suit -->
+<div class="section">
+  <div class="section-label">筒子牌 · Circles</div>
+  <div class="tile-row">
+    <div class="tile"><span class="tile-num tong">一</span><span class="tile-suit-label tong">筒</span></div>
+    <div class="tile"><span class="tile-num tong">二</span><span class="tile-suit-label tong">筒</span></div>
+    <div class="tile"><span class="tile-num tong">三</span><span class="tile-suit-label tong">筒</span></div>
+    <div class="tile"><span class="tile-num tong">四</span><span class="tile-suit-label tong">筒</span></div>
+    <div class="tile"><span class="tile-num tong">五</span><span class="tile-suit-label tong">筒</span></div>
+    <div class="tile"><span class="tile-num tong">六</span><span class="tile-suit-label tong">筒</span></div>
+    <div class="tile"><span class="tile-num tong">七</span><span class="tile-suit-label tong">筒</span></div>
+    <div class="tile"><span class="tile-num tong">八</span><span class="tile-suit-label tong">筒</span></div>
+    <div class="tile"><span class="tile-num tong">九</span><span class="tile-suit-label tong">筒</span></div>
+  </div>
+</div>
+
+<!-- 條 suit -->
+<div class="section">
+  <div class="section-label">條子牌 · Bamboo</div>
+  <div class="tile-row">
+    <div class="tile"><span class="tile-num tiao">一</span><span class="tile-suit-label tiao">條</span></div>
+    <div class="tile"><span class="tile-num tiao">二</span><span class="tile-suit-label tiao">條</span></div>
+    <div class="tile"><span class="tile-num tiao">三</span><span class="tile-suit-label tiao">條</span></div>
+    <div class="tile"><span class="tile-num tiao">四</span><span class="tile-suit-label tiao">條</span></div>
+    <div class="tile"><span class="tile-num tiao">五</span><span class="tile-suit-label tiao">條</span></div>
+    <div class="tile"><span class="tile-num tiao">六</span><span class="tile-suit-label tiao">條</span></div>
+    <div class="tile"><span class="tile-num tiao">七</span><span class="tile-suit-label tiao">條</span></div>
+    <div class="tile"><span class="tile-num tiao">八</span><span class="tile-suit-label tiao">條</span></div>
+    <div class="tile"><span class="tile-num tiao">九</span><span class="tile-suit-label tiao">條</span></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- 字牌 -->
+<div class="section">
+  <div class="section-label">風牌 · Winds &nbsp;&nbsp; 三元牌 · Dragons &nbsp;&nbsp; 花牌 · Flowers</div>
+  <div class="tile-row">
+    <div class="tile"><span class="tile-single wind">東</span></div>
+    <div class="tile"><span class="tile-single wind">南</span></div>
+    <div class="tile"><span class="tile-single wind">西</span></div>
+    <div class="tile"><span class="tile-single wind">北</span></div>
+
+    <div style="width:16px"></div>
+
+    <div class="tile"><span class="tile-single zhong">中</span></div>
+    <div class="tile"><span class="tile-single fa">發</span></div>
+    <div class="tile"><div class="bai-border"></div></div>
+
+    <div style="width:16px"></div>
+
+    <div class="tile"><span class="tile-single flower-color">春</span><span class="tile-flower-label flower-color">SPRING</span></div>
+    <div class="tile"><span class="tile-single flower-color">夏</span><span class="tile-flower-label flower-color">SUMMER</span></div>
+    <div class="tile"><span class="tile-single flower-color">秋</span><span class="tile-flower-label flower-color">AUTUMN</span></div>
+    <div class="tile"><span class="tile-single flower-color">冬</span><span class="tile-flower-label flower-color">WINTER</span></div>
+    <div class="tile"><span class="tile-single flower-color">梅</span><span class="tile-flower-label flower-color">PLUM</span></div>
+    <div class="tile"><span class="tile-single flower-color">蘭</span><span class="tile-flower-label flower-color">ORCHID</span></div>
+    <div class="tile"><span class="tile-single flower-color">竹</span><span class="tile-flower-label flower-color">BAMBOO</span></div>
+    <div class="tile"><span class="tile-single flower-color">菊</span><span class="tile-flower-label flower-color">CHRYSAN.</span></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- States -->
+<div class="section">
+  <div class="section-label">牌面狀態 · Tile States</div>
+  <div class="states-demo">
+    <div class="state-block">
+      <div class="tile"><span class="tile-num wan">五</span><span class="tile-suit-label wan">萬</span></div>
+      <div class="state-label">Normal</div>
+    </div>
+    <div class="state-block">
+      <div class="tile highlighted"><span class="tile-num wan">五</span><span class="tile-suit-label wan">萬</span></div>
+      <div class="state-label">剛摸到 · Just Drawn</div>
+    </div>
+    <div class="state-block">
+      <div class="tile selected"><span class="tile-num tong">七</span><span class="tile-suit-label tong">筒</span></div>
+      <div class="state-label">待出牌 · To Discard</div>
+    </div>
+    <div style="width:16px"></div>
+    <!-- face-down -->
+    <div class="state-block">
+      <div class="tile back"></div>
+      <div class="state-label">牌背 · Face Down</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Small tiles (AI players) -->
+<div class="section">
+  <div class="section-label">縮小版 · AI Player Hand (Small)</div>
+  <div class="tile-row">
+    <div class="tile sm"><span class="tile-num wan">三</span><span class="tile-suit-label wan">萬</span></div>
+    <div class="tile sm"><span class="tile-num tong">七</span><span class="tile-suit-label tong">筒</span></div>
+    <div class="tile sm"><span class="tile-num tiao">四</span><span class="tile-suit-label tiao">條</span></div>
+    <div class="tile sm"><span class="tile-single wind">東</span></div>
+    <div class="tile sm"><span class="tile-single zhong">中</span></div>
+    <div class="tile sm"><span class="tile-single fa">發</span></div>
+    <div class="tile sm"><div class="bai-border"></div></div>
+    <div class="tile sm back"></div>
+    <div class="tile sm back"></div>
+    <div class="tile sm back"></div>
+  </div>
+</div>
+
+</body>
+</html>
