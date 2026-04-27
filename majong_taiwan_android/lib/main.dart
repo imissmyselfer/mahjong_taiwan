@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:majong_taiwan_core/majong_taiwan_core.dart';
 import 'mahjong_game.dart';
 
@@ -41,12 +41,18 @@ class MahjongApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.light,
         scaffoldBackgroundColor: const Color(0xFFDCE7E0),
-        textTheme: GoogleFonts.notoSerifTcTextTheme(),
-        appBarTheme: AppBarTheme(
-          backgroundColor: const Color(0xFF4A6759),
+        fontFamily: 'Iansui',
+        textTheme: const TextTheme(
+          bodyMedium: TextStyle(fontFamily: 'Iansui'),
+          bodySmall: TextStyle(fontFamily: 'Iansui'),
+          bodyLarge: TextStyle(fontFamily: 'Iansui'),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF4A6759),
           foregroundColor: Colors.white,
           elevation: 0,
-          titleTextStyle: GoogleFonts.notoSerifTc(
+          titleTextStyle: TextStyle(
+            fontFamily: 'Iansui',
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.w500,
@@ -69,6 +75,12 @@ class MahjongScreen extends StatefulWidget {
 class _MahjongScreenState extends State<MahjongScreen> {
   late MahjongGame _game;
   Timer? _gameTimer;
+  final AudioPlayer _audio = AudioPlayer();
+
+  Future<void> _playSound(String name) async {
+    await _audio.stop();
+    await _audio.play(AssetSource('sounds/$name.mp3'));
+  }
 
   @override
   void initState() {
@@ -82,6 +94,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
   @override
   void dispose() {
     _gameTimer?.cancel();
+    _audio.dispose();
     super.dispose();
   }
 
@@ -95,6 +108,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     if (options.isEmpty) return;
 
     if (options.length == 1) {
+      _playSound('action');
       setState(() => _game.submitDecision(PlayerPosition.east, 'EAT', eatTiles: options.first));
       return;
     }
@@ -132,18 +146,33 @@ class _MahjongScreenState extends State<MahjongScreen> {
       ),
     );
     if (chosen != null && mounted) {
+      _playSound('action');
       setState(() => _game.submitDecision(PlayerPosition.east, 'EAT', eatTiles: chosen));
     }
   }
 
   void _processGameLoop() {
     if (_game.state == GameState.gameOver) return;
+    final prevState = _game.state;
     setState(() {
       _game.autoProcessActions();
       if (_game.state == GameState.waitingForDiscard && _game.isBot(_game.currentTurn)) {
         _game.botAutoDiscard();
       }
     });
+    // AI 出牌聲
+    if (prevState == GameState.waitingForDiscard && _game.state == GameState.waitingForActions) {
+      _playSound('discard');
+    }
+    // AI 碰/槓/吃聲
+    if (prevState == GameState.waitingForActions && _game.state == GameState.waitingForDiscard) {
+      final acted = _game.lastActionLabels.values.any((v) => v != null);
+      if (acted) _playSound('action');
+    }
+    // 胡牌聲
+    if (_game.state == GameState.gameOver && prevState != GameState.gameOver) {
+      _playSound('win');
+    }
   }
 
   @override
@@ -225,7 +254,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              '當前輪序: ${_game.currentTurn.name.toUpperCase()}',
+              '當前輪序: ${const {PlayerPosition.east: '東', PlayerPosition.south: '南', PlayerPosition.west: '西', PlayerPosition.north: '北'}[_game.currentTurn]}家',
               style: const TextStyle(fontSize: 16, color: Color(0xFF7A8C83), fontWeight: FontWeight.w600),
             ),
           ),
@@ -375,10 +404,31 @@ class _MahjongScreenState extends State<MahjongScreen> {
     final melts = _game.playerMelts[pos] ?? [];
     final flowers = _game.playerFlowers[pos] ?? [];
 
+    final actionLabel = _game.lastActionLabels[pos];
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(name, style: const TextStyle(fontSize: 15, color: Color(0xFF5C7A6D), fontWeight: FontWeight.w500)),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(name, style: const TextStyle(fontSize: 15, color: Color(0xFF5C7A6D), fontWeight: FontWeight.w500)),
+            if (actionLabel != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: (actionLabel == 'WIN' || actionLabel == 'TSUMO') ? const Color(0xFFC66A6A) : const Color(0xFF5C7A6D),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _actionLabels[actionLabel] ?? actionLabel,
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ],
+        ),
         const SizedBox(height: 4),
         Wrap(
           spacing: -14,
@@ -498,13 +548,13 @@ class _MahjongScreenState extends State<MahjongScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ...hand.map((id) => GestureDetector(
-                  onTap: () => canDiscard ? setState(() => _game.discard(PlayerPosition.east, id)) : null,
+                  onTap: () { if (canDiscard) { _playSound('discard'); setState(() => _game.discard(PlayerPosition.east, id)); } },
                   child: TileWidget(tileId: id, borderOverride: canDiscard ? const Color(0xFF8A9E96) : null, borderWidth: canDiscard ? 2.5 : 1),
                 )),
                 if (lastDrawn != null) ...[
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: () => canDiscard ? setState(() => _game.discard(PlayerPosition.east, lastDrawn)) : null,
+                    onTap: () { if (canDiscard) { _playSound('discard'); setState(() => _game.discard(PlayerPosition.east, lastDrawn)); } },
                     child: TileWidget(tileId: lastDrawn, isHighlighted: true),
                   ),
                 ],
@@ -515,6 +565,15 @@ class _MahjongScreenState extends State<MahjongScreen> {
       ),
     );
   }
+
+  static const _actionLabels = {
+    'WIN': '胡牌',
+    'TSUMO': '自摸',
+    'PONG': '碰',
+    'KONG': '槓',
+    'EAT': '吃',
+    'PASS': '過',
+  };
 
   Widget _buildActionButtons() {
     return Padding(
@@ -530,8 +589,16 @@ class _MahjongScreenState extends State<MahjongScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
             ),
-            onPressed: () => action == 'EAT' ? _handleEatButton() : setState(() => _game.submitDecision(PlayerPosition.east, action)),
-            child: Text(action, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            onPressed: () {
+              if (action == 'EAT') {
+                _handleEatButton();
+              } else {
+                final sound = (action == 'WIN' || action == 'TSUMO') ? 'win' : 'action';
+                _playSound(sound);
+                setState(() => _game.submitDecision(PlayerPosition.east, action));
+              }
+            },
+            child: Text(_actionLabels[action] ?? action, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         )).toList(),
       ),
