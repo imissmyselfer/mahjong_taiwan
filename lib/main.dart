@@ -303,7 +303,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: melt.tiles.map((id) => TileWidget(tileId: id, sizeScale: 0.65, isSmall: true)).toList(),
+                      children: melt.tiles.map((id) => TileWidget(tileId: id)).toList(),
                     ),
                   )),
                   if (flowers.isNotEmpty) ...[
@@ -318,7 +318,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text('花 ', style: TextStyle(fontSize: 10, color: Color(0xFF9C6EAA))),
-                          ...flowers.map((id) => TileWidget(tileId: id, sizeScale: 0.65, isSmall: true)),
+                          ...flowers.map((id) => TileWidget(tileId: id)),
                         ],
                       ),
                     ),
@@ -409,15 +409,12 @@ class TileWidget extends StatelessWidget {
         : borderOverride;
     final double bw = isHighlighted ? 2.5 : (borderWidth ?? 1.0);
 
-    final String assetPath = isBack
-        ? 'assets/tiles/Back.png'
-        : _tileAssetPath(tileId);
-
     return Container(
       margin: const EdgeInsets.all(1),
       width: w,
       height: h,
       decoration: BoxDecoration(
+        color: isBack ? const Color(0xFF2D4B3E) : null,
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(
           color: borderColor ?? const Color(0xFFD1D1D1),
@@ -427,11 +424,11 @@ class TileWidget extends StatelessWidget {
           BoxShadow(color: Colors.black.withOpacity(0.08), offset: const Offset(0, 2), blurRadius: 2),
         ],
       ),
-      child: ClipRRect(
+      child: isBack ? null : ClipRRect(
         borderRadius: BorderRadius.circular(radius),
-        child: assetPath.endsWith('.svg')
-            ? SvgPicture.asset(assetPath, fit: BoxFit.fill)
-            : Image.asset(assetPath, fit: BoxFit.cover),
+        child: _tileAssetPath(tileId).endsWith('.svg')
+            ? SvgPicture.asset(_tileAssetPath(tileId), fit: BoxFit.fill)
+            : Image.asset(_tileAssetPath(tileId), fit: BoxFit.cover),
       ),
     );
   }
