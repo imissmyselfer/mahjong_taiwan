@@ -200,60 +200,14 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 
   Widget _buildSidePlayer(PlayerPosition pos, String name, int turns) {
-    final melts = _game.playerMelts[pos] ?? [];
-    final flowers = _game.playerFlowers[pos] ?? [];
     return ClipRect(
       child: SizedBox(
-      width: 110,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (melts.isNotEmpty || flowers.isNotEmpty) ...[
-            _buildSideMelts(melts, flowers),
-            const SizedBox(height: 6),
-          ],
-          ClipRect(
-            child: RotatedBox(
-              quarterTurns: turns,
-              child: Center(child: _buildOtherPlayerHand(pos, name, showMelts: false)),
-            ),
-          ),
-        ],
-      ),
-    ));
-  }
-
-  Widget _buildSideMelts(List<Melt> melts, List<int> flowers) {
-    return Wrap(
-      spacing: 3,
-      runSpacing: 3,
-      alignment: WrapAlignment.center,
-      children: [
-        ...melts.map((melt) => Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0F4F2),
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: const Color(0xFFCAD3CD)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: melt.tiles.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.55)).toList(),
-          ),
-        )),
-        if (flowers.isNotEmpty) Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5EEF8),
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: const Color(0xFFD7BDE2)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: flowers.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: 0.55)).toList(),
-          ),
+        width: 110,
+        child: RotatedBox(
+          quarterTurns: turns,
+          child: Center(child: _buildOtherPlayerHand(pos, name)),
         ),
-      ],
+      ),
     );
   }
 
@@ -416,10 +370,10 @@ class _MahjongScreenState extends State<MahjongScreen> {
     );
   }
 
-  Widget _buildOtherPlayerHand(PlayerPosition pos, String name, {bool showMelts = true}) {
+  Widget _buildOtherPlayerHand(PlayerPosition pos, String name) {
     final handCount = _game.playerHands[pos]?.length ?? 0;
-    final melts = showMelts ? (_game.playerMelts[pos] ?? []) : <Melt>[];
-    final flowers = showMelts ? (_game.playerFlowers[pos] ?? []) : <int>[];
+    final melts = _game.playerMelts[pos] ?? [];
+    final flowers = _game.playerFlowers[pos] ?? [];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
