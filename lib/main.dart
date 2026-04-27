@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:majong_taiwan_core/majong_taiwan_core.dart';
 import 'mahjong_game.dart';
 
@@ -39,11 +40,18 @@ class MahjongApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFDCE7E0), // 雅緻青磁色，視覺更舒適
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF4A6759), // 深沈草本綠
+        scaffoldBackgroundColor: const Color(0xFFDCE7E0),
+        textTheme: GoogleFonts.notoSerifTcTextTheme(),
+        appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFF4A6759),
           foregroundColor: Colors.white,
           elevation: 0,
+          titleTextStyle: GoogleFonts.notoSerifTc(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 1.2,
+          ),
         ),
       ),
       home: const MahjongScreen(),
@@ -154,9 +162,14 @@ class _MahjongScreenState extends State<MahjongScreen> {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 100),
-              child: ClipRect(child: _buildOtherPlayerHand(PlayerPosition.north, '北家')),
+            SizedBox(
+              height: 120,
+              child: ClipRect(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: _buildOtherPlayerHand(PlayerPosition.north, '北家'),
+                ),
+              ),
             ),
             Expanded(
               child: Row(
@@ -258,7 +271,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
               '當前輪序: ${_game.currentTurn.name.toUpperCase()}',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF7A8C83), fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 16, color: Color(0xFF7A8C83), fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(
@@ -331,6 +344,9 @@ class _MahjongScreenState extends State<MahjongScreen> {
       ];
     }
 
+    final patterns = _game.winningPatterns;
+    final totalTai = _game.totalTai;
+
     return Container(
       padding: const EdgeInsets.all(16),
       width: double.infinity,
@@ -339,9 +355,47 @@ class _MahjongScreenState extends State<MahjongScreen> {
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text('遊戲結束', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A6759))),
-          Text(winner != null ? '獲勝: ${winner.name}' : '流局', style: const TextStyle(fontSize: 14)),
+          const Text('遊戲結束', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4A6759))),
+          const SizedBox(height: 4),
+          if (winner != null) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('獲勝：${winner.name}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4A6759),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('✦ $totalTai 台', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            if (patterns.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Divider(height: 1, color: Color(0xFFBDCAC5)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                alignment: WrapAlignment.center,
+                children: patterns.map((p) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBDCAC5)),
+                  ),
+                  child: Text('${p.name}  ${p.tai}台', style: const TextStyle(fontSize: 13, color: Color(0xFF2D4B3E))),
+                )).toList(),
+              ),
+            ],
+          ] else
+            const Text('流局', style: TextStyle(fontSize: 15)),
           ...handWidgets,
         ],
       ),
@@ -354,7 +408,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('最後出牌 ', style: TextStyle(fontSize: 11, color: Colors.black38)),
+          const Text('最後出牌 ', style: TextStyle(fontSize: 13, color: Colors.black38)),
           TileWidget(tileId: _game.lastDiscardedTile!, isSmall: true, sizeScale: 0.8),
         ],
       ),
@@ -369,7 +423,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(name, style: const TextStyle(fontSize: 12, color: Color(0xFF5C7A6D))),
+        Text(name, style: const TextStyle(fontSize: 15, color: Color(0xFF5C7A6D), fontWeight: FontWeight.w500)),
         const SizedBox(height: 4),
         Wrap(
           spacing: -14,
@@ -472,7 +526,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('花 ', style: TextStyle(fontSize: 10, color: Color(0xFF9C6EAA))),
+                          const Text('花 ', style: TextStyle(fontSize: 12, color: Color(0xFF9C6EAA))),
                           ...flowers.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: meltScale)),
                         ],
                       ),
