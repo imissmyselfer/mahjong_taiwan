@@ -1,31 +1,26 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:majong_taiwan_core/majong_taiwan_core.dart';
 import 'mahjong_game.dart';
 
-// ── Tile Unicode mapping (I.MahjongTW font, U+1F000–U+1F02B) ──────────────
+// ── Tile asset mapping ─────────────────────────────────────────────────────
+// 花牌用手工 SVG，其餘用 PNG（Inkscape SVG 含 filter/marker，flutter_svg 不支援）
 
-String _tileChar(int id) {
-  if (id >= 11 && id <= 19) return String.fromCharCode(0x1F007 + (id - 11)); // 一~九萬
-  if (id >= 21 && id <= 29) return String.fromCharCode(0x1F019 + (id - 21)); // 一~九筒
-  if (id >= 31 && id <= 39) return String.fromCharCode(0x1F010 + (id - 31)); // 一~九索
+String _tileAssetPath(int id) {
+  if (id >= 61 && id <= 68) return 'assets/tiles/flower${id - 60}.svg';
+  if (id >= 11 && id <= 19) return 'assets/tiles/Man${id - 10}.png';
+  if (id >= 21 && id <= 29) return 'assets/tiles/Pin${id - 20}.png';
+  if (id >= 31 && id <= 39) return 'assets/tiles/Sou${id - 30}.png';
   switch (id) {
-    case 41: return String.fromCharCode(0x1F000); // 東
-    case 43: return String.fromCharCode(0x1F001); // 南
-    case 45: return String.fromCharCode(0x1F002); // 西
-    case 47: return String.fromCharCode(0x1F003); // 北
-    case 51: return String.fromCharCode(0x1F004); // 中
-    case 53: return String.fromCharCode(0x1F005); // 發
-    case 55: return String.fromCharCode(0x1F006); // 白
-    case 61: return String.fromCharCode(0x1F026); // 春
-    case 62: return String.fromCharCode(0x1F027); // 夏
-    case 63: return String.fromCharCode(0x1F028); // 秋
-    case 64: return String.fromCharCode(0x1F029); // 冬
-    case 65: return String.fromCharCode(0x1F022); // 梅
-    case 66: return String.fromCharCode(0x1F023); // 蘭
-    case 67: return String.fromCharCode(0x1F024); // 竹
-    case 68: return String.fromCharCode(0x1F025); // 菊
-    default: return String.fromCharCode(0x1F02B); // 牌背
+    case 41: return 'assets/tiles/Ton.png';
+    case 43: return 'assets/tiles/Nan.png';
+    case 45: return 'assets/tiles/Shaa.png';
+    case 47: return 'assets/tiles/Pei.png';
+    case 51: return 'assets/tiles/Chun.png';
+    case 53: return 'assets/tiles/Hatsu.png';
+    case 55: return 'assets/tiles/Haku.png';
+    default: return 'assets/tiles/Front.png';
   }
 }
 
@@ -405,39 +400,39 @@ class TileWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double fontSize = (isSmall ? 28.0 : 44.0) * sizeScale;
-    final String char = isBack
-        ? String.fromCharCode(0x1F02B)
-        : _tileChar(tileId);
-
-    Widget tile = Text(
-      char,
-      style: TextStyle(
-        fontFamily: 'MahjongTW',
-        fontSize: fontSize,
-        height: 1.0,
-        leadingDistribution: TextLeadingDistribution.even,
-      ),
-    );
+    final double w = (isSmall ? 32.0 : 48.0) * sizeScale;
+    final double h = w * 1.35;
+    final double radius = isSmall ? 4.0 : 6.0;
 
     final Color? borderColor = isHighlighted
         ? const Color(0xFFD4AF37)
         : borderOverride;
-    final double bw = isHighlighted ? 2.5 : (borderWidth ?? 1.5);
+    final double bw = isHighlighted ? 2.5 : (borderWidth ?? 1.0);
 
-    if (borderColor != null) {
-      tile = Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: borderColor, width: bw),
+    final String assetPath = isBack
+        ? 'assets/tiles/Back.png'
+        : _tileAssetPath(tileId);
+
+    return Container(
+      margin: const EdgeInsets.all(1),
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: borderColor ?? const Color(0xFFD1D1D1),
+          width: borderColor != null ? bw : 1.0,
         ),
-        child: tile,
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(1),
-      child: tile,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.08), offset: const Offset(0, 2), blurRadius: 2),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: assetPath.endsWith('.svg')
+            ? SvgPicture.asset(assetPath, fit: BoxFit.fill)
+            : Image.asset(assetPath, fit: BoxFit.cover),
+      ),
     );
   }
 }

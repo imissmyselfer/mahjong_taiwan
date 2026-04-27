@@ -60,12 +60,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/fonts/
-
-  fonts:
-    - family: MahjongTW
-      fonts:
-        - asset: assets/fonts/I.MahjongTW.otf
+    - assets/tiles/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
