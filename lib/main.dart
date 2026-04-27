@@ -335,7 +335,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
               children: [
                 ...hand.map((id) => GestureDetector(
                   onTap: () => canDiscard ? setState(() => _game.discard(PlayerPosition.east, id)) : null,
-                  child: TileWidget(tileId: id, borderOverride: canDiscard ? const Color(0xFF8A9E96) : Colors.black12, borderWidth: canDiscard ? 2.5 : 1),
+                  child: TileWidget(tileId: id, borderOverride: canDiscard ? const Color(0xFF8A9E96) : null, borderWidth: canDiscard ? 2.5 : 1),
                 )),
                 if (lastDrawn != null) ...[
                   const SizedBox(width: 12),
