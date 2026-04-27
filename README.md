@@ -13,7 +13,7 @@ mahjong_taiwan/
 ## 快速開始
 
 ```bash
-git clone https://github.com/<your-username>/mahjong_taiwan.git
+git clone https://github.com/imissmyselfer/mahjong_taiwan.git
 cd mahjong_taiwan/majong_taiwan_android
 flutter pub get
 flutter run -d linux   # 或 -d chrome / android
