@@ -202,7 +202,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
   Widget _buildSidePlayer(PlayerPosition pos, String name, int turns) {
     final melts = _game.playerMelts[pos] ?? [];
     final flowers = _game.playerFlowers[pos] ?? [];
-    return SizedBox(
+    return ClipRect(
+      child: SizedBox(
       width: 110,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -219,7 +220,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildSideMelts(List<Melt> melts, List<int> flowers) {
