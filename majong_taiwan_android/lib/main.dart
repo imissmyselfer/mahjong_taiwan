@@ -76,8 +76,10 @@ class _MahjongScreenState extends State<MahjongScreen> {
   late MahjongGame _game;
   Timer? _gameTimer;
   final AudioPlayer _audio = AudioPlayer();
+  bool _soundEnabled = true;
 
   Future<void> _playSound(String name) async {
+    if (!_soundEnabled) return;
     await _audio.stop();
     await _audio.play(AssetSource('sounds/$name.mp3'));
   }
@@ -184,7 +186,16 @@ class _MahjongScreenState extends State<MahjongScreen> {
         title: const Text('台灣十六張麻將', style: TextStyle(letterSpacing: 1.2, fontWeight: FontWeight.w400)),
         actions: [
           IconButton(
+            icon: Icon(_soundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded),
+            tooltip: _soundEnabled ? '關閉音效' : '開啟音效',
+            onPressed: () {
+              setState(() => _soundEnabled = !_soundEnabled);
+              if (!_soundEnabled) _audio.stop();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded),
+            tooltip: '重新開局',
             onPressed: () => setState(() => _game = MahjongGame()),
           )
         ],

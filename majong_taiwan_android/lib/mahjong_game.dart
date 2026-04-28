@@ -66,6 +66,10 @@ class MahjongGame {
   static const int _labelKeepTicks = 3; // 3 × 1500ms = 4.5 秒
   bool get isNewActionLabel => _labelTicks == _labelKeepTicks;
 
+  // BOT 吃牌機率（PONG/KONG 一律接，EAT 偶爾放掉以保留手牌彈性）
+  static const double _botEatRate = 0.6;
+  final Random _rng = Random();
+
   MahjongGame() {
     _initializeDeck();
     _shuffleAndDeal();
@@ -434,25 +438,63 @@ class MahjongGame {
 
     final playersToAct = possibleActions.keys.toList();
     for (var pos in playersToAct) {
+      if (state != GameState.waitingForActions) break;
+      final actions = possibleActions[pos];
+      if (actions == null) continue;
       if (isBot(pos) && !playerDecisions.containsKey(pos)) {
-        final actions = possibleActions[pos]!;
-        String decision = 'PASS';
-        if (actions.contains('WIN')) decision = 'WIN';
-        else if (actions.contains('TSUMO')) decision = 'TSUMO';
-        else if (actions.contains('PONG')) decision = 'PONG';
-        else if (actions.contains('KONG')) decision = 'KONG';
-        else if (actions.contains('EAT')) decision = 'EAT';
-        submitDecision(pos, decision);
+        submitDecision(pos, _decideBotAction(actions));
       }
     }
   }
 
-  // TODO(方案 B): 實作策略性出牌（保留面子、棄孤立牌）
+  // 優先級：WIN/TSUMO/KONG/PONG 一定接，EAT 機率接
+  String _decideBotAction(List<String> actions) {
+    if (actions.contains('WIN')) return 'WIN';
+    if (actions.contains('TSUMO')) return 'TSUMO';
+    if (actions.contains('KONG')) return 'KONG';
+    if (actions.contains('PONG')) return 'PONG';
+    if (actions.contains('EAT') && _rng.nextDouble() < _botEatRate) return 'EAT';
+    return 'PASS';
+  }
+
   void botAutoDiscard() {
     if (state != GameState.waitingForDiscard || !isBot(currentTurn)) return;
     final hand = _p(currentTurn).hand;
-    if (hand.isNotEmpty) {
-      discard(currentTurn, hand[Random().nextInt(hand.length)]);
+    if (hand.isEmpty) return;
+    discard(currentTurn, _pickDiscardTile(hand));
+  }
+
+  // 啟發式選牌：打分數最低（最孤立）的牌
+  // - 對子或刻子 → 高分保留
+  // - 字牌單張 → 低分優先丟（無法組順子）
+  // - 數字單張 → 看左右鄰居數量加分
+  int _pickDiscardTile(List<int> hand) {
+    final counts = <int, int>{};
+    for (var t in hand) counts[t] = (counts[t] ?? 0) + 1;
+
+    int scoreOf(int t) {
+      final c = counts[t]!;
+      if (c >= 3) return 100;       // 刻子，絕對保留
+      if (c == 2) return 50;        // 對子，盡量保留
+      if (t >= 40) return 1;         // 字牌單張，最先丟
+      // 數字牌單張：看前後 2 格鄰居
+      int s = 5;
+      if ((counts[t - 2] ?? 0) > 0) s += 2;
+      if ((counts[t - 1] ?? 0) > 0) s += 4;
+      if ((counts[t + 1] ?? 0) > 0) s += 4;
+      if ((counts[t + 2] ?? 0) > 0) s += 2;
+      return s;
     }
+
+    int? bestTile;
+    int bestScore = 1 << 30;
+    for (final t in hand) {
+      final s = scoreOf(t);
+      if (s < bestScore) {
+        bestScore = s;
+        bestTile = t;
+      }
+    }
+    return bestTile ?? hand.first;
   }
 }
