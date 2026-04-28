@@ -65,7 +65,7 @@ class MahjongGame {
   Map<PlayerPosition, MahjongAction> playerDecisions = {};
 
   int _labelTicks = 0;
-  static const int _labelKeepTicks = 3; // 3 × 1500ms = 4.5 秒
+  static const int _labelKeepTicks = 2; // 2 × 800ms = 1.6 秒
   bool get isNewActionLabel => _labelTicks == _labelKeepTicks;
 
   final BotDifficulty difficulty;

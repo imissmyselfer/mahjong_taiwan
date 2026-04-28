@@ -99,7 +99,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
   void initState() {
     super.initState();
     _game = MahjongGame(difficulty: _difficulty);
-    _gameTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+    _gameTimer = Timer.periodic(const Duration(milliseconds: 800), (_) {
       _processGameLoop();
     });
   }
