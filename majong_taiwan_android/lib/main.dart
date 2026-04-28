@@ -77,6 +77,13 @@ class _MahjongScreenState extends State<MahjongScreen> {
   Timer? _gameTimer;
   final AudioPlayer _audio = AudioPlayer();
   bool _soundEnabled = true;
+  BotDifficulty _difficulty = BotDifficulty.normal;
+
+  static const _difficultyLabels = {
+    BotDifficulty.easy: '簡單',
+    BotDifficulty.normal: '普通',
+    BotDifficulty.hard: '困難',
+  };
 
   Future<void> _playSound(String name) async {
     if (!_soundEnabled) return;
@@ -84,10 +91,14 @@ class _MahjongScreenState extends State<MahjongScreen> {
     await _audio.play(AssetSource('sounds/$name.mp3'));
   }
 
+  void _newGame() {
+    setState(() => _game = MahjongGame(difficulty: _difficulty));
+  }
+
   @override
   void initState() {
     super.initState();
-    _game = MahjongGame();
+    _game = MahjongGame(difficulty: _difficulty);
     _gameTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
       _processGameLoop();
     });
@@ -183,8 +194,34 @@ class _MahjongScreenState extends State<MahjongScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('台灣十六張麻將', style: TextStyle(letterSpacing: 1.2, fontWeight: FontWeight.w400)),
+        title: Text(
+          '台灣十六張麻將 · ${_difficultyLabels[_difficulty]}',
+          style: const TextStyle(letterSpacing: 1.2, fontWeight: FontWeight.w400),
+        ),
         actions: [
+          PopupMenuButton<BotDifficulty>(
+            icon: const Icon(Icons.psychology_rounded),
+            tooltip: 'BOT 難度',
+            onSelected: (level) {
+              setState(() {
+                _difficulty = level;
+                _game = MahjongGame(difficulty: level);
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('已切換為「${_difficultyLabels[level]}」，新局開始'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            itemBuilder: (ctx) => BotDifficulty.values
+                .map((level) => CheckedPopupMenuItem<BotDifficulty>(
+                      value: level,
+                      checked: _difficulty == level,
+                      child: Text(_difficultyLabels[level]!),
+                    ))
+                .toList(),
+          ),
           IconButton(
             icon: Icon(_soundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded),
             tooltip: _soundEnabled ? '關閉音效' : '開啟音效',
@@ -196,7 +233,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: '重新開局',
-            onPressed: () => setState(() => _game = MahjongGame()),
+            onPressed: _newGame,
           )
         ],
       ),
@@ -247,7 +284,12 @@ class _MahjongScreenState extends State<MahjongScreen> {
         width: 110,
         child: RotatedBox(
           quarterTurns: turns,
-          child: Center(child: _buildOtherPlayerHand(pos, name)),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: _buildOtherPlayerHand(pos, name),
+            ),
+          ),
         ),
       ),
     );

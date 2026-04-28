@@ -9,6 +9,8 @@ enum GameState {
   gameOver
 }
 
+enum BotDifficulty { easy, normal, hard }
+
 class MahjongAction {
   final PlayerPosition player;
   final String type; // 'WIN', 'TSUMO', 'PONG', 'KONG', 'EAT', 'PASS'
@@ -66,11 +68,10 @@ class MahjongGame {
   static const int _labelKeepTicks = 3; // 3 × 1500ms = 4.5 秒
   bool get isNewActionLabel => _labelTicks == _labelKeepTicks;
 
-  // BOT 吃牌機率（PONG/KONG 一律接，EAT 偶爾放掉以保留手牌彈性）
-  static const double _botEatRate = 0.6;
+  final BotDifficulty difficulty;
   final Random _rng = Random();
 
-  MahjongGame() {
+  MahjongGame({this.difficulty = BotDifficulty.normal}) {
     _initializeDeck();
     _shuffleAndDeal();
   }
@@ -447,13 +448,24 @@ class MahjongGame {
     }
   }
 
-  // 優先級：WIN/TSUMO/KONG/PONG 一定接，EAT 機率接
+  // BOT 動作決策：難度越高越積極接吃碰
+  // WIN/TSUMO/KONG 各難度都接（不胡會卡關）
   String _decideBotAction(List<String> actions) {
     if (actions.contains('WIN')) return 'WIN';
     if (actions.contains('TSUMO')) return 'TSUMO';
     if (actions.contains('KONG')) return 'KONG';
-    if (actions.contains('PONG')) return 'PONG';
-    if (actions.contains('EAT') && _rng.nextDouble() < _botEatRate) return 'EAT';
+    final pongRate = switch (difficulty) {
+      BotDifficulty.easy => 0.5,
+      BotDifficulty.normal => 0.8,
+      BotDifficulty.hard => 1.0,
+    };
+    final eatRate = switch (difficulty) {
+      BotDifficulty.easy => 0.3,
+      BotDifficulty.normal => 0.5,
+      BotDifficulty.hard => 0.6,
+    };
+    if (actions.contains('PONG') && _rng.nextDouble() < pongRate) return 'PONG';
+    if (actions.contains('EAT') && _rng.nextDouble() < eatRate) return 'EAT';
     return 'PASS';
   }
 
@@ -464,11 +476,27 @@ class MahjongGame {
     discard(currentTurn, _pickDiscardTile(hand));
   }
 
+  // 依難度決定出哪張：
+  //   easy   → 純隨機
+  //   normal → 50% 啟發式 / 50% 隨機
+  //   hard   → 全啟發式
+  int _pickDiscardTile(List<int> hand) {
+    switch (difficulty) {
+      case BotDifficulty.easy:
+        return hand[_rng.nextInt(hand.length)];
+      case BotDifficulty.normal:
+        if (_rng.nextDouble() < 0.5) return hand[_rng.nextInt(hand.length)];
+        return _heuristicDiscard(hand);
+      case BotDifficulty.hard:
+        return _heuristicDiscard(hand);
+    }
+  }
+
   // 啟發式選牌：打分數最低（最孤立）的牌
   // - 對子或刻子 → 高分保留
   // - 字牌單張 → 低分優先丟（無法組順子）
   // - 數字單張 → 看左右鄰居數量加分
-  int _pickDiscardTile(List<int> hand) {
+  int _heuristicDiscard(List<int> hand) {
     final counts = <int, int>{};
     for (var t in hand) counts[t] = (counts[t] ?? 0) + 1;
 

@@ -4,7 +4,8 @@ import 'package:majong_taiwan_android/mahjong_game.dart';
 // 模擬一整局：east 也讓 BOT 邏輯出牌（不需要 UI）
 // 統計 N 局內各家勝率
 void main() {
-  test('1000 局 BOT 自動對戰 — 看誰會胡', () {
+  for (final level in BotDifficulty.values) {
+    test('1000 局 BOT 自動對戰 — 難度 ${level.name}', () {
     final stats = <PlayerPosition, int>{
       PlayerPosition.east: 0,
       PlayerPosition.south: 0,
@@ -17,7 +18,7 @@ void main() {
     const maxTicksPerGame = 1000; // 防無窮迴圈
 
     for (var i = 0; i < totalGames; i++) {
-      final game = MahjongGame();
+      final game = MahjongGame(difficulty: level);
       var ticks = 0;
       while (game.state != GameState.gameOver && ticks < maxTicksPerGame) {
         ticks++;
@@ -36,33 +37,11 @@ void main() {
           }
           game.autoProcessActions();
         } else if (game.state == GameState.waitingForDiscard) {
-          // 為了公平比較：暫時把 east 也當 BOT 出牌
-          // （透過 botAutoDiscard 的 isBot 限制，所以這邊不能直接呼叫）
+          // east 用隨機出牌模擬「中等玩家」，方便比較三檔難度的 BOT 勝率
           if (game.currentTurn == PlayerPosition.east) {
             final hand = game.players[PlayerPosition.east]!.hand;
             if (hand.isNotEmpty) {
-              // 用相同的孤立牌啟發法（複製 _pickDiscardTile 邏輯）
-              final counts = <int, int>{};
-              for (var t in hand) counts[t] = (counts[t] ?? 0) + 1;
-              int scoreOf(int t) {
-                final c = counts[t]!;
-                if (c >= 3) return 100;
-                if (c == 2) return 50;
-                if (t >= 40) return 1;
-                int s = 5;
-                if ((counts[t - 2] ?? 0) > 0) s += 2;
-                if ((counts[t - 1] ?? 0) > 0) s += 4;
-                if ((counts[t + 1] ?? 0) > 0) s += 4;
-                if ((counts[t + 2] ?? 0) > 0) s += 2;
-                return s;
-              }
-              int best = hand.first;
-              int bestScore = 1 << 30;
-              for (final t in hand) {
-                final s = scoreOf(t);
-                if (s < bestScore) { bestScore = s; best = t; }
-              }
-              game.discard(PlayerPosition.east, best);
+              game.discard(PlayerPosition.east, hand[hand.length ~/ 2]);
             }
           } else {
             game.botAutoDiscard();
@@ -77,7 +56,7 @@ void main() {
       }
     }
 
-    print('=== 統計 ===');
+    print('=== 統計（${level.name}） ===');
     print('east  : ${stats[PlayerPosition.east]}');
     print('south : ${stats[PlayerPosition.south]}');
     print('west  : ${stats[PlayerPosition.west]}');
@@ -91,5 +70,6 @@ void main() {
         stats[PlayerPosition.west]! +
         stats[PlayerPosition.north]!;
     expect(botWins, greaterThan(0), reason: 'BOT 從未獲勝 — 引擎或 BOT 邏輯有 bug');
-  });
+    });
+  }
 }
