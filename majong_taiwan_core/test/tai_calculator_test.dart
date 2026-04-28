@@ -38,8 +38,8 @@ void main() {
       expect(names(patterns), contains('莊家'));
     });
 
-    test('閒家自摸（有副露）只算自摸 1 台', () {
-      // 有副露才不會升級為「門清一摸三」
+    test('閒家自摸（有吃碰槓）只算自摸 1 台', () {
+      // 有吃碰槓才不會升級為「門清一摸三」
       final hand = WinningHand(eye: 22, melts: [
         seq(11, exposed: true), seq(12), seq(13), seq(14), seq(15)
       ]);
@@ -48,7 +48,7 @@ void main() {
       expect(names(patterns), isNot(contains('門清一摸三')));
     });
 
-    test('門清（全部未副露）+1 台', () {
+    test('門清（完全未吃碰槓）+1 台', () {
       final hand = WinningHand(eye: 22, melts: [seq(11), seq(12), seq(13), seq(14), seq(15)]);
       final patterns = TaiCalculator.calculate(hand, ctx());
       expect(names(patterns), contains('門清'));
@@ -61,7 +61,7 @@ void main() {
       expect(names(patterns), isNot(contains('自摸')));
     });
 
-    test('有副露的自摸只算自摸，不算門清', () {
+    test('有吃碰槓的自摸只算自摸，不算門清', () {
       final hand = WinningHand(eye: 22, melts: [
         seq(11, exposed: true), seq(12), seq(13), seq(14), seq(15)
       ]);
@@ -216,7 +216,7 @@ void main() {
     });
 
     test('連 2 拉 2：莊家 1 + 門清 1 + 連 4 + 平胡 2 = 8 台', () {
-      // 全順子無字、未副露非自摸 → 同時觸發 平胡 + 門清
+      // 全順子無字、未吃碰槓、非自摸 → 同時觸發 平胡 + 門清
       final hand = WinningHand(eye: 22, melts: [seq(11), seq(12), seq(13), seq(14), seq(15)]);
       final patterns = TaiCalculator.calculate(hand, ctx(isDealer: true, lianZhuangCount: 2));
       expect(names(patterns), containsAll(['莊家', '連2拉2', '門清', '平胡']));
