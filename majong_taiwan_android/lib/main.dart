@@ -246,14 +246,14 @@ class _MahjongScreenState extends State<MahjongScreen> {
               child: ClipRect(
                 child: Align(
                   alignment: Alignment.topCenter,
-                  child: _buildOtherPlayerHand(PlayerPosition.north, '北家'),
+                  child: _buildOtherPlayerHand(PlayerPosition.west, '西家'),
                 ),
               ),
             ),
             Expanded(
               child: Row(
                 children: [
-                  _buildSidePlayer(PlayerPosition.west, '西家', 1),
+                  _buildSidePlayer(PlayerPosition.north, '北家', 1),
                   Expanded(child: _buildTableCenter()),
                   _buildSidePlayer(PlayerPosition.south, '南家', 3),
                 ],
