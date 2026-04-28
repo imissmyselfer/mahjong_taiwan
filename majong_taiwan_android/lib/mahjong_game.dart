@@ -54,6 +54,7 @@ class MahjongGame {
   PlayerPosition? lastDiscarder;
 
   PlayerPosition? winner;
+  PlayerPosition? firer; // 放槍者（非自摸時）
   bool isTsumo = false;
   List<TaiPattern> winningPatterns = [];
   int totalTai = 0;
@@ -350,6 +351,7 @@ class MahjongGame {
     winningPatterns = TaiCalculator.calculate(result, context);
     totalTai = winningPatterns.fold(0, (sum, x) => sum + x.tai);
 
+    firer = tsumo ? null : lastDiscarder;
     _clearActionState();
     winner = pos;
     isTsumo = tsumo;

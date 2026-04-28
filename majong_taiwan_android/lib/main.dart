@@ -433,7 +433,10 @@ class _MahjongScreenState extends State<MahjongScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('獲勝：${winner.name}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                Text(
+                  '獲勝：${const {PlayerPosition.east: '東家', PlayerPosition.south: '南家', PlayerPosition.west: '西家', PlayerPosition.north: '北家'}[winner]}',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(width: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -444,6 +447,17 @@ class _MahjongScreenState extends State<MahjongScreen> {
                   child: Text('✦ $totalTai 台', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
               ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _game.isTsumo
+                  ? '自摸'
+                  : '放槍：${const {PlayerPosition.east: '東家', PlayerPosition.south: '南家', PlayerPosition.west: '西家', PlayerPosition.north: '北家'}[_game.firer] ?? '？'}',
+              style: TextStyle(
+                fontSize: 13,
+                color: _game.isTsumo ? const Color(0xFF4A6759) : const Color(0xFFC66A6A),
+                fontWeight: FontWeight.w500,
+              ),
             ),
             if (patterns.isNotEmpty) ...[
               const SizedBox(height: 8),
