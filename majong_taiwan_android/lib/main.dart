@@ -254,19 +254,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
               child: Row(
                 children: [
                   _buildSidePlayer(PlayerPosition.west, '西家', 1),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Positioned.fill(child: _buildTableCenter()),
-                        if (_game.state != GameState.gameOver &&
-                            _game.possibleActions.containsKey(PlayerPosition.east))
-                          Positioned(
-                            left: 0, right: 0, bottom: 12,
-                            child: _buildActionButtons(),
-                          ),
-                      ],
-                    ),
-                  ),
+                  Expanded(child: _buildTableCenter()),
                   _buildSidePlayer(PlayerPosition.south, '南家', 3),
                 ],
               ),
@@ -296,6 +284,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 
   Widget _buildTableCenter() {
+    final hasEastActions = _game.state != GameState.gameOver &&
+        _game.possibleActions.containsKey(PlayerPosition.east);
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -313,6 +303,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
               style: const TextStyle(fontSize: 16, color: Color(0xFF7A8C83), fontWeight: FontWeight.w600),
             ),
           ),
+          _buildActionAnnouncement(),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(8),
@@ -326,7 +317,46 @@ class _MahjongScreenState extends State<MahjongScreen> {
           ),
           if (_game.state == GameState.gameOver) _buildGameOverInfo()
           else if (_game.lastDiscardedTile != null) _buildLastDiscard(),
+          if (hasEastActions) _buildActionButtons(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActionAnnouncement() {
+    const posNames = {
+      PlayerPosition.north: '北家',
+      PlayerPosition.west: '西家',
+      PlayerPosition.south: '南家',
+    };
+    final active = posNames.keys.where((p) => _game.players[p]!.actionLabel != null).toList();
+    if (active.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 16,
+        children: active.map((pos) {
+          final label = _game.players[pos]!.actionLabel!;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(posNames[pos]!, style: const TextStyle(fontSize: 13, color: Color(0xFF7A8C83))),
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: (label == 'WIN' || label == 'TSUMO') ? const Color(0xFFC66A6A) : const Color(0xFF5C7A6D),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _actionLabels[label] ?? label,
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -634,7 +664,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
 
   Widget _buildActionButtons() {
     return Padding(
-      padding: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: _game.possibleActions[PlayerPosition.east]!.map((action) => Padding(
