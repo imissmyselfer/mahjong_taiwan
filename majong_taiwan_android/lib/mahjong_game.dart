@@ -401,8 +401,10 @@ class MahjongGame {
       return;
     }
 
-    // 暗槓 / 加槓
-    final selfKongTiles = _getSelfKongTiles(pos);
+    // 暗槓 / 加槓：只在本次摸到的牌能成槓時才詢問，避免已過掉的機會反覆出現
+    final selfKongTiles = _getSelfKongTiles(pos)
+        .where((t) => t == p.lastDrawn)
+        .toList();
     if (selfKongTiles.isNotEmpty) {
       if (isBot(pos)) {
         _executeSelfKong(pos, selfKongTiles.first);
