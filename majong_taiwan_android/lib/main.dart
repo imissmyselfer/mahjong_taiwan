@@ -102,7 +102,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     if (_game.lastDiscardedTile == null) return;
     final discarded = _game.lastDiscardedTile!;
     final options = ActionValidator.getEatOptions(
-      _game.playerHands[PlayerPosition.east]!,
+      _game.players[PlayerPosition.east]!.hand,
       discarded,
     );
     if (options.isEmpty) return;
@@ -159,7 +159,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
       // 標籤剛設好時（bot 剛碰/槓/吃），這一 tick 不出牌，讓 UI 顯示標籤
       if (_game.state == GameState.waitingForDiscard &&
           _game.isBot(_game.currentTurn) &&
-          _game.lastActionLabels.isEmpty) {
+          _game.players.values.every((p) => p.actionLabel == null)) {
         _game.botAutoDiscard();
       }
     });
@@ -284,9 +284,10 @@ class _MahjongScreenState extends State<MahjongScreen> {
 
     List<Widget> handWidgets = [];
     if (showHand) {
-      final hand = List<int>.from(_game.playerHands[winner] ?? [])..sort();
-      final melts = _game.playerMelts[winner] ?? [];
-      final flowers = _game.playerFlowers[winner] ?? [];
+      final p = _game.players[winner]!;
+      final hand = List<int>.from(p.hand)..sort();
+      final melts = p.melts;
+      final flowers = p.flowers;
 
       handWidgets = [
         const SizedBox(height: 8),
@@ -402,11 +403,11 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 
   Widget _buildOtherPlayerHand(PlayerPosition pos, String name) {
-    final handCount = _game.playerHands[pos]?.length ?? 0;
-    final melts = _game.playerMelts[pos] ?? [];
-    final flowers = _game.playerFlowers[pos] ?? [];
-
-    final actionLabel = _game.lastActionLabels[pos];
+    final p = _game.players[pos]!;
+    final handCount = p.hand.length;
+    final melts = p.melts;
+    final flowers = p.flowers;
+    final actionLabel = p.actionLabel;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -474,10 +475,11 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 
   Widget _buildMyHand() {
-    final hand = List<int>.from(_game.playerHands[PlayerPosition.east] ?? []);
-    final flowers = _game.playerFlowers[PlayerPosition.east] ?? [];
-    final melts = _game.playerMelts[PlayerPosition.east] ?? [];
-    final lastDrawn = _game.lastDrawnTiles[PlayerPosition.east];
+    final p = _game.players[PlayerPosition.east]!;
+    final hand = List<int>.from(p.hand);
+    final flowers = p.flowers;
+    final melts = p.melts;
+    final lastDrawn = p.lastDrawn;
     final bool canDiscard = _game.currentTurn == PlayerPosition.east && _game.state == GameState.waitingForDiscard;
 
     if (lastDrawn != null && hand.contains(lastDrawn)) {
