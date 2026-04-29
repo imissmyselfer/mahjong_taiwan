@@ -77,13 +77,82 @@ class _MahjongScreenState extends State<MahjongScreen> {
   Timer? _gameTimer;
   final AudioPlayer _audio = AudioPlayer();
   bool _soundEnabled = true;
+  bool _isEnglish = false;
   BotDifficulty _difficulty = BotDifficulty.normal;
 
-  static const _difficultyLabels = {
+  Map<BotDifficulty, String> get _difficultyLabels => _isEnglish ? {
+    BotDifficulty.easy: 'Easy',
+    BotDifficulty.normal: 'Normal',
+    BotDifficulty.hard: 'Hard',
+  } : {
     BotDifficulty.easy: '簡單',
     BotDifficulty.normal: '普通',
     BotDifficulty.hard: '困難',
   };
+
+  Map<String, String> get _actionLabels => _isEnglish ? {
+    'WIN': 'Win',
+    'TSUMO': 'Self-Draw',
+    'PONG': 'Pong',
+    'KONG': 'Kong',
+    'EAT': 'Eat',
+    'PASS': 'Pass',
+  } : {
+    'WIN': '胡牌',
+    'TSUMO': '自摸',
+    'PONG': '碰',
+    'KONG': '槓',
+    'EAT': '吃',
+    'PASS': '過',
+  };
+
+  static const _posNamesZh = {
+    PlayerPosition.east: '東家',
+    PlayerPosition.south: '南家',
+    PlayerPosition.west: '西家',
+    PlayerPosition.north: '北家',
+  };
+  static const _posNamesEn = {
+    PlayerPosition.east: 'East',
+    PlayerPosition.south: 'South',
+    PlayerPosition.west: 'West',
+    PlayerPosition.north: 'North',
+  };
+
+  String _t(String zh, String en) => _isEnglish ? en : zh;
+  String _posName(PlayerPosition pos) => (_isEnglish ? _posNamesEn : _posNamesZh)[pos]!;
+
+  static const _patternNamesEn = {
+    '莊家': 'Dealer',
+    '自摸': 'Self-Draw',
+    '門清一摸三': 'Concealed+Self-Draw',
+    '門清': 'Concealed Hand',
+    '紅中': 'Red Dragon',
+    '青發': 'Green Dragon',
+    '白板': 'White Dragon',
+    '圈風': 'Round Wind',
+    '門風': 'Seat Wind',
+    '小三元': 'Little 3 Dragons',
+    '大三元': 'Big 3 Dragons',
+    '小四喜': 'Little 4 Winds',
+    '大四喜': 'Big 4 Winds',
+    '碰碰胡': 'All Triplets',
+    '平胡': 'All Sequences',
+    '混一色': 'Half Flush',
+    '清一色': 'Full Flush',
+    '字一色': 'All Honors',
+    '獨聽': 'Single Wait',
+  };
+
+  String _patternName(String zhName) {
+    if (!_isEnglish) return zhName;
+    if (zhName.startsWith('花牌')) return 'Flowers ${zhName.replaceAll('花牌 ', '')}';
+    if (zhName.startsWith('連')) {
+      final match = RegExp(r'連(\d+)').firstMatch(zhName);
+      if (match != null) return 'Dealer Streak ×${match.group(1)}';
+    }
+    return _patternNamesEn[zhName] ?? zhName;
+  }
 
   Future<void> _playSound(String name) async {
     if (!_soundEnabled) return;
@@ -131,7 +200,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('選擇吃法', style: TextStyle(color: Color(0xFF2D4B3E), fontWeight: FontWeight.bold)),
+        title: Text(_t('選擇吃法', 'Choose Eat'), style: const TextStyle(color: Color(0xFF2D4B3E), fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: options.map((opt) {
@@ -195,13 +264,13 @@ class _MahjongScreenState extends State<MahjongScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          '台灣十六張麻將 · ${_difficultyLabels[_difficulty]}',
+          '${_t('台灣十六張麻將', 'Taiwan Mahjong')} · ${_difficultyLabels[_difficulty]}',
           style: const TextStyle(letterSpacing: 1.2, fontWeight: FontWeight.w400),
         ),
         actions: [
           PopupMenuButton<BotDifficulty>(
             icon: const Icon(Icons.psychology_rounded),
-            tooltip: 'BOT 難度',
+            tooltip: _t('BOT 難度', 'BOT Difficulty'),
             onSelected: (level) {
               setState(() {
                 _difficulty = level;
@@ -209,7 +278,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('已切換為「${_difficultyLabels[level]}」，新局開始'),
+                  content: Text(_t('已切換為「${_difficultyLabels[level]}」，新局開始', 'Switched to "${_difficultyLabels[level]}", new game started')),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -222,9 +291,17 @@ class _MahjongScreenState extends State<MahjongScreen> {
                     ))
                 .toList(),
           ),
+          TextButton(
+            onPressed: () => setState(() => _isEnglish = !_isEnglish),
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            child: Text(
+              _isEnglish ? '繁中' : 'EN',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          ),
           IconButton(
             icon: Icon(_soundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded),
-            tooltip: _soundEnabled ? '關閉音效' : '開啟音效',
+            tooltip: _t(_soundEnabled ? '關閉音效' : '開啟音效', _soundEnabled ? 'Sound Off' : 'Sound On'),
             onPressed: () {
               setState(() => _soundEnabled = !_soundEnabled);
               if (!_soundEnabled) _audio.stop();
@@ -232,7 +309,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            tooltip: '重新開局',
+            tooltip: _t('重新開局', 'New Game'),
             onPressed: _newGame,
           )
         ],
@@ -252,16 +329,16 @@ class _MahjongScreenState extends State<MahjongScreen> {
                     child: OverflowBox(
                       maxHeight: double.infinity,
                       alignment: Alignment.topCenter,
-                      child: _buildOtherPlayerHand(PlayerPosition.west, '西家'),
+                      child: _buildOtherPlayerHand(PlayerPosition.west, _posName(PlayerPosition.west)),
                     ),
                   ),
                 ),
                 Expanded(
                   child: Row(
                     children: [
-                      _buildSidePlayer(PlayerPosition.north, '北家', 1, width: sideW),
+                      _buildSidePlayer(PlayerPosition.north, _posName(PlayerPosition.north), 1, width: sideW),
                       Expanded(child: _buildTableCenter()),
-                      _buildSidePlayer(PlayerPosition.south, '南家', 3, width: sideW),
+                      _buildSidePlayer(PlayerPosition.south, _posName(PlayerPosition.south), 3, width: sideW),
                     ],
                   ),
                 ),
@@ -307,7 +384,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              '當前輪序: ${const {PlayerPosition.east: '東', PlayerPosition.south: '南', PlayerPosition.west: '西', PlayerPosition.north: '北'}[_game.currentTurn]}家',
+              _t('當前輪序: ', 'Turn: ') + _posName(_game.currentTurn),
               style: const TextStyle(fontSize: 16, color: Color(0xFF7A8C83), fontWeight: FontWeight.w600),
             ),
           ),
@@ -332,12 +409,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 
   Widget _buildActionAnnouncement() {
-    const posNames = {
-      PlayerPosition.north: '北家',
-      PlayerPosition.west: '西家',
-      PlayerPosition.south: '南家',
-    };
-    final active = posNames.keys.where((p) => _game.players[p]!.actionLabel != null).toList();
+    final posKeys = [PlayerPosition.north, PlayerPosition.west, PlayerPosition.south];
+    final active = posKeys.where((p) => _game.players[p]!.actionLabel != null).toList();
     if (active.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -349,7 +422,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(posNames[pos]!, style: const TextStyle(fontSize: 13, color: Color(0xFF7A8C83))),
+              Text(_posName(pos), style: const TextStyle(fontSize: 13, color: Color(0xFF7A8C83))),
               const SizedBox(width: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -435,14 +508,14 @@ class _MahjongScreenState extends State<MahjongScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text('遊戲結束', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4A6759))),
+          Text(_t('遊戲結束', 'Game Over'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4A6759))),
           const SizedBox(height: 4),
           if (winner != null) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  '獲勝：${const {PlayerPosition.east: '東家', PlayerPosition.south: '南家', PlayerPosition.west: '西家', PlayerPosition.north: '北家'}[winner]}',
+                  '${_t('獲勝：', 'Winner: ')}${_posName(winner)}',
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(width: 12),
@@ -452,15 +525,15 @@ class _MahjongScreenState extends State<MahjongScreen> {
                     color: const Color(0xFF4A6759),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('✦ $totalTai 台', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                  child: Text('✦ $totalTai ${_t('台', 'pts')}', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
               _game.isTsumo
-                  ? '自摸'
-                  : '放槍：${const {PlayerPosition.east: '東家', PlayerPosition.south: '南家', PlayerPosition.west: '西家', PlayerPosition.north: '北家'}[_game.firer] ?? '？'}',
+                  ? _t('自摸', 'Self-Draw')
+                  : _t('放槍：', 'Discard by: ') + (_game.firer != null ? _posName(_game.firer!) : '?'),
               style: TextStyle(
                 fontSize: 13,
                 color: _game.isTsumo ? const Color(0xFF4A6759) : const Color(0xFFC66A6A),
@@ -482,12 +555,12 @@ class _MahjongScreenState extends State<MahjongScreen> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: const Color(0xFFBDCAC5)),
                   ),
-                  child: Text('${p.name}  ${p.tai}台', style: const TextStyle(fontSize: 13, color: Color(0xFF2D4B3E))),
+                  child: Text('${_patternName(p.name)}  ${p.tai}${_t('台', 'pts')}', style: const TextStyle(fontSize: 13, color: Color(0xFF2D4B3E))),
                 )).toList(),
               ),
             ],
           ] else
-            const Text('流局', style: TextStyle(fontSize: 15)),
+            Text(_t('流局', 'Draw'), style: const TextStyle(fontSize: 15)),
           ...handWidgets,
         ],
       ),
@@ -500,7 +573,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('最後出牌 ', style: TextStyle(fontSize: 13, color: Colors.black38)),
+          Text(_t('最後出牌 ', 'Last Discard '), style: const TextStyle(fontSize: 13, color: Colors.black38)),
           TileWidget(tileId: _game.lastDiscardedTile!, isSmall: true, sizeScale: 0.8),
         ],
       ),
@@ -631,7 +704,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('花 ', style: TextStyle(fontSize: 12, color: Color(0xFF9C6EAA))),
+          Text(_t('花 ', 'Flower '), style: const TextStyle(fontSize: 12, color: Color(0xFF9C6EAA))),
           ...flowers.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: meltScale)),
         ],
       ),
@@ -706,15 +779,6 @@ class _MahjongScreenState extends State<MahjongScreen> {
       ),
     );
   }
-
-  static const _actionLabels = {
-    'WIN': '胡牌',
-    'TSUMO': '自摸',
-    'PONG': '碰',
-    'KONG': '槓',
-    'EAT': '吃',
-    'PASS': '過',
-  };
 
   Widget _buildActionButtons() {
     return Padding(
