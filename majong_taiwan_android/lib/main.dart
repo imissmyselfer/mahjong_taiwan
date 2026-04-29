@@ -238,38 +238,46 @@ class _MahjongScreenState extends State<MahjongScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 120,
-              child: ClipRect(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: _buildOtherPlayerHand(PlayerPosition.west, '西家'),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double w = constraints.maxWidth;
+            final double sideW = w < 440 ? (w * 0.14).clamp(50.0, 80.0) : 110.0;
+            final double topH = w < 440 ? 80.0 : 120.0;
+            return Column(
+              children: [
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: topH,
+                  child: ClipRect(
+                    child: OverflowBox(
+                      maxHeight: double.infinity,
+                      alignment: Alignment.topCenter,
+                      child: _buildOtherPlayerHand(PlayerPosition.west, '西家'),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: Row(
-                children: [
-                  _buildSidePlayer(PlayerPosition.north, '北家', 1),
-                  Expanded(child: _buildTableCenter()),
-                  _buildSidePlayer(PlayerPosition.south, '南家', 3),
-                ],
-              ),
-            ),
-            _buildMyHand(),
-          ],
+                Expanded(
+                  child: Row(
+                    children: [
+                      _buildSidePlayer(PlayerPosition.north, '北家', 1, width: sideW),
+                      Expanded(child: _buildTableCenter()),
+                      _buildSidePlayer(PlayerPosition.south, '南家', 3, width: sideW),
+                    ],
+                  ),
+                ),
+                _buildMyHand(),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildSidePlayer(PlayerPosition pos, String name, int turns) {
+  Widget _buildSidePlayer(PlayerPosition pos, String name, int turns, {double width = 110}) {
     return ClipRect(
       child: SizedBox(
-        width: 110,
+        width: width,
         child: RotatedBox(
           quarterTurns: turns,
           child: Center(
@@ -586,13 +594,100 @@ class _MahjongScreenState extends State<MahjongScreen> {
       hand.sort();
     }
 
-    // landscape 手機 shortestSide < 480 → compact 模式縮小牌和 padding
+    final double screenWidth = MediaQuery.of(context).size.width;
     final bool compact = MediaQuery.of(context).size.shortestSide < 480;
+    final bool narrow = screenWidth < 440;
     final double meltScale = compact ? 0.65 : 0.85;
+
+    GestureDetector tileTap(int id, {bool highlighted = false}) => GestureDetector(
+      onTap: () { if (canDiscard) { _playSound('discard'); setState(() => _game.discard(PlayerPosition.east, id)); } },
+      child: highlighted
+          ? TileWidget(tileId: id, isHighlighted: true)
+          : TileWidget(tileId: id, borderOverride: canDiscard ? const Color(0xFF8A9E96) : null, borderWidth: canDiscard ? 2.5 : 1),
+    );
+
+    Widget meltChip(Melt melt) => Container(
+      margin: const EdgeInsets.only(right: 8, bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F4F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFCAD3CD)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: melt.tiles.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: meltScale)).toList(),
+      ),
+    );
+
+    Widget flowerChip() => Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5EEF8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFD7BDE2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('花 ', style: TextStyle(fontSize: 12, color: Color(0xFF9C6EAA))),
+          ...flowers.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: meltScale)),
+        ],
+      ),
+    );
+
+    // 窄螢幕：Wrap 自動換行，全部牌都看得到
+    // 寬螢幕：SingleChildScrollView 單排橫向滾動
+    Widget meltsWidget = narrow
+        ? Wrap(
+            spacing: 0,
+            runSpacing: 0,
+            children: [
+              ...melts.map(meltChip),
+              if (flowers.isNotEmpty) flowerChip(),
+            ],
+          )
+        : SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ...melts.map(meltChip),
+                if (flowers.isNotEmpty) flowerChip(),
+              ],
+            ),
+          );
+
+    Widget tilesWidget = narrow
+        ? Wrap(
+            spacing: 2,
+            runSpacing: 4,
+            children: [
+              ...hand.map((id) => tileTap(id)),
+              if (lastDrawn != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: tileTap(lastDrawn, highlighted: true),
+                ),
+            ],
+          )
+        : SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ...hand.map((id) => tileTap(id)),
+                if (lastDrawn != null) ...[
+                  const SizedBox(width: 12),
+                  tileTap(lastDrawn, highlighted: true),
+                ],
+              ],
+            ),
+          );
 
     return Container(
       padding: compact
-          ? const EdgeInsets.fromLTRB(16, 8, 16, 16)
+          ? const EdgeInsets.fromLTRB(12, 8, 12, 12)
           : const EdgeInsets.fromLTRB(16, 12, 16, 32),
       decoration: const BoxDecoration(
         color: Color(0xFFF5F0E8),
@@ -603,65 +698,10 @@ class _MahjongScreenState extends State<MahjongScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (melts.isNotEmpty || flowers.isNotEmpty) ...[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ...melts.map((melt) => Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F4F2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFCAD3CD)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: melt.tiles.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: meltScale)).toList(),
-                    ),
-                  )),
-                  if (flowers.isNotEmpty) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5EEF8),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFD7BDE2)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('花 ', style: TextStyle(fontSize: 12, color: Color(0xFF9C6EAA))),
-                          ...flowers.map((id) => TileWidget(tileId: id, isSmall: true, sizeScale: meltScale)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            meltsWidget,
             const SizedBox(height: 4),
           ],
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ...hand.map((id) => GestureDetector(
-                  onTap: () { if (canDiscard) { _playSound('discard'); setState(() => _game.discard(PlayerPosition.east, id)); } },
-                  child: TileWidget(tileId: id, borderOverride: canDiscard ? const Color(0xFF8A9E96) : null, borderWidth: canDiscard ? 2.5 : 1),
-                )),
-                if (lastDrawn != null) ...[
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: () { if (canDiscard) { _playSound('discard'); setState(() => _game.discard(PlayerPosition.east, lastDrawn)); } },
-                    child: TileWidget(tileId: lastDrawn, isHighlighted: true),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          tilesWidget,
         ],
       ),
     );
